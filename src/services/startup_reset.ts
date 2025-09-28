@@ -55,8 +55,13 @@ export class StartupResetService {
 
   static async performStartupReset(guild: Guild): Promise<void> {
     console.log('Performing startup reset...');
-    await this.resetAllMatches(guild);
+
+    // Reset players first to clear any match associations
     await this.resetAllPlayers();
+
+    // Then reset matches and clean up channels
+    await this.resetAllMatches(guild);
+
     console.log('Startup reset completed');
   }
 }

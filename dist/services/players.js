@@ -18,7 +18,12 @@ class PlayerService {
             try {
                 const dbPlayer = await Player_1.Player.findOne({ discordId });
                 if (dbPlayer) {
-                    player = dbPlayer.toObject();
+                    player = {
+                        discordId: dbPlayer.discordId,
+                        username: dbPlayer.username,
+                        currentQueues: dbPlayer.currentQueues || [],
+                        currentMatch: dbPlayer.currentMatch || undefined
+                    };
                 }
                 else {
                     const newPlayer = new Player_1.Player({
@@ -28,7 +33,12 @@ class PlayerService {
                         currentMatch: undefined
                     });
                     await newPlayer.save();
-                    player = newPlayer.toObject();
+                    player = {
+                        discordId,
+                        username,
+                        currentQueues: [],
+                        currentMatch: undefined
+                    };
                 }
                 this.players.set(discordId, player);
             }
@@ -128,14 +138,16 @@ class PlayerService {
     async resetAllPlayers() {
         try {
             console.log('Resetting all player states...');
+            // Clear in-memory cache first
+            this.players.clear();
             // Clear all player queues and matches in database
             const result = await Player_1.Player.updateMany({}, {
-                currentQueues: [],
-                currentMatch: undefined
+                $set: {
+                    currentQueues: [],
+                    currentMatch: undefined
+                }
             });
-            // Clear in-memory cache
-            this.players.clear();
-            console.log(`Reset ${result.modifiedCount} player states`);
+            console.log(`Reset ${result.modifiedCount} player states and cleared cache`);
             return result.modifiedCount;
         }
         catch (error) {

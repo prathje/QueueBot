@@ -170,6 +170,8 @@ export class Queue {
       const player = await this.playerService.getOrCreatePlayer(user.id, user.username);
 
       if (this.playerService.isPlayerInMatch(user.id)) {
+        const player = await this.playerService.getPlayer(user.id);
+        console.log(`Player ${user.username} (${user.id}) tried to join queue but is in match: ${player?.currentMatch}`);
         await interaction.reply({
           content: 'You are already in a match!',
           ephemeral: true
