@@ -35,5 +35,13 @@ export declare class MatchHandler {
     getMatch(): IMatch;
     getId(): string;
     getState(): MatchState;
+    forceCancel(reason?: string): Promise<void>;
+    forceDelete(): Promise<void>;
+    static cleanupMatchChannels(guild: Guild, match: {
+        matchId: string;
+        discordChannelId?: string;
+        discordVoiceChannel1Id?: string;
+        discordVoiceChannel2Id?: string;
+    }): Promise<number>;
 }
 //# sourceMappingURL=match_handler.d.ts.map

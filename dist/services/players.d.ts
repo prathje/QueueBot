@@ -14,5 +14,6 @@ export declare class PlayerService {
     isPlayerInQueue(discordId: string, queueId: string): boolean;
     isPlayerInMatch(discordId: string): boolean;
     getPlayersInQueue(queueId: string): string[];
+    resetAllPlayers(): Promise<number>;
 }
 //# sourceMappingURL=players.d.ts.map

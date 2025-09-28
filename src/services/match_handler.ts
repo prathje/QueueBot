@@ -589,4 +589,56 @@ export class MatchHandler {
       console.error('Error force deleting match channels:', error);
     }
   }
+
+  static async cleanupMatchChannels(guild: Guild, match: { matchId: string; discordChannelId?: string; discordVoiceChannel1Id?: string; discordVoiceChannel2Id?: string }): Promise<number> {
+    let deletedChannels = 0;
+
+    try {
+      // Delete text channel
+      if (match.discordChannelId) {
+        try {
+          const textChannel = await guild.channels.fetch(match.discordChannelId);
+          if (textChannel) {
+            await textChannel.delete();
+            deletedChannels++;
+            console.log(`Deleted text channel ${match.discordChannelId} for match ${match.matchId}`);
+          }
+        } catch (error) {
+          console.log(`Text channel ${match.discordChannelId} no longer exists`);
+        }
+      }
+
+      // Delete voice channel 1
+      if (match.discordVoiceChannel1Id) {
+        try {
+          const voiceChannel1 = await guild.channels.fetch(match.discordVoiceChannel1Id);
+          if (voiceChannel1) {
+            await voiceChannel1.delete();
+            deletedChannels++;
+            console.log(`Deleted voice channel 1 ${match.discordVoiceChannel1Id} for match ${match.matchId}`);
+          }
+        } catch (error) {
+          console.log(`Voice channel 1 ${match.discordVoiceChannel1Id} no longer exists`);
+        }
+      }
+
+      // Delete voice channel 2
+      if (match.discordVoiceChannel2Id) {
+        try {
+          const voiceChannel2 = await guild.channels.fetch(match.discordVoiceChannel2Id);
+          if (voiceChannel2) {
+            await voiceChannel2.delete();
+            deletedChannels++;
+            console.log(`Deleted voice channel 2 ${match.discordVoiceChannel2Id} for match ${match.matchId}`);
+          }
+        } catch (error) {
+          console.log(`Voice channel 2 ${match.discordVoiceChannel2Id} no longer exists`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error deleting channels for match ${match.matchId}:`, error);
+    }
+
+    return deletedChannels;
+  }
 }

@@ -4,6 +4,7 @@ const discord_js_1 = require("discord.js");
 const environment_1 = require("./config/environment");
 const database_1 = require("./config/database");
 const gamemode_1 = require("./services/gamemode");
+const startup_reset_1 = require("./services/startup_reset");
 class TeeWorldsLeagueBot {
     constructor() {
         this.guild = null;
@@ -42,6 +43,8 @@ class TeeWorldsLeagueBot {
                 throw new Error(`Guild with ID ${environment_1.config.discord.guildId} not found`);
             }
             console.log(`Connected to guild: ${this.guild.name}`);
+            // Reset all matches and players on startup
+            await startup_reset_1.StartupResetService.performStartupReset(this.guild);
             await this.initializeGamemodes();
         }
         catch (error) {
@@ -87,6 +90,19 @@ class TeeWorldsLeagueBot {
                         displayName: 'DM Free For All',
                         mapPool: ['dm1', 'dm2', 'dm3', 'dm4', 'dm5'],
                         playerCount: 4,
+                        matchmakingAlgorithm: 'random teams'
+                    }
+                ]
+            },
+            {
+                id: 'test',
+                displayName: 'Test',
+                queues: [
+                    {
+                        id: 'test',
+                        displayName: 'Test',
+                        mapPool: ['tets'],
+                        playerCount: 1,
                         matchmakingAlgorithm: 'random teams'
                     }
                 ]

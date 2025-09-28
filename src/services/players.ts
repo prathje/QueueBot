@@ -144,4 +144,28 @@ export class PlayerService {
     }
     return playersInQueue;
   }
+
+  async resetAllPlayers(): Promise<number> {
+    try {
+      console.log('Resetting all player states...');
+
+      // Clear all player queues and matches in database
+      const result = await Player.updateMany(
+        {},
+        {
+          currentQueues: [],
+          currentMatch: undefined
+        }
+      );
+
+      // Clear in-memory cache
+      this.players.clear();
+
+      console.log(`Reset ${result.modifiedCount} player states`);
+      return result.modifiedCount;
+    } catch (error) {
+      console.error('Error resetting players:', error);
+      return 0;
+    }
+  }
 }

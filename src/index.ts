@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits, Guild } from 'discord.js';
 import { config, validateEnvironment } from './config/environment';
 import { connectToDatabase } from './config/database';
 import { Gamemode } from './services/gamemode';
+import { StartupResetService } from './services/startup_reset';
 import { GamemodeConfig } from './types';
 
 class TeeWorldsLeagueBot {
@@ -51,6 +52,10 @@ class TeeWorldsLeagueBot {
       }
 
       console.log(`Connected to guild: ${this.guild.name}`);
+
+      // Reset all matches and players on startup
+      await StartupResetService.performStartupReset(this.guild);
+
       await this.initializeGamemodes();
     } catch (error) {
       console.error('Error initializing bot:', error);

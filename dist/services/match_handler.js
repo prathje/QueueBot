@@ -83,6 +83,10 @@ class MatchHandler {
                         id: this.guild.roles.everyone.id,
                         deny: [discord_js_1.PermissionFlagsBits.ViewChannel]
                     },
+                    {
+                        id: this.client.user.id,
+                        allow: [discord_js_1.PermissionFlagsBits.ViewChannel, discord_js_1.PermissionFlagsBits.SendMessages, discord_js_1.PermissionFlagsBits.ManageChannels]
+                    },
                     ...this.match.players.map(playerId => ({
                         id: playerId,
                         allow: [discord_js_1.PermissionFlagsBits.ViewChannel, discord_js_1.PermissionFlagsBits.SendMessages]
@@ -108,6 +112,10 @@ class MatchHandler {
                         id: this.guild.roles.everyone.id,
                         deny: [discord_js_1.PermissionFlagsBits.ViewChannel]
                     },
+                    {
+                        id: this.client.user.id,
+                        allow: [discord_js_1.PermissionFlagsBits.ViewChannel, discord_js_1.PermissionFlagsBits.Connect, discord_js_1.PermissionFlagsBits.ManageChannels]
+                    },
                     ...this.match.teams.team1.map(playerId => ({
                         id: playerId,
                         allow: [discord_js_1.PermissionFlagsBits.ViewChannel, discord_js_1.PermissionFlagsBits.Connect]
@@ -121,6 +129,10 @@ class MatchHandler {
                     {
                         id: this.guild.roles.everyone.id,
                         deny: [discord_js_1.PermissionFlagsBits.ViewChannel]
+                    },
+                    {
+                        id: this.client.user.id,
+                        allow: [discord_js_1.PermissionFlagsBits.ViewChannel, discord_js_1.PermissionFlagsBits.Connect, discord_js_1.PermissionFlagsBits.ManageChannels]
                     },
                     ...this.match.teams.team2.map(playerId => ({
                         id: playerId,
@@ -441,6 +453,111 @@ class MatchHandler {
     }
     getState() {
         return this.match.state;
+    }
+    async forceCancel(reason = 'Force cancelled by administrator') {
+        console.log(`Force cancelling match ${this.match.id}: ${reason}`);
+        // Clear any timeouts
+        if (this.readyTimeout) {
+            clearTimeout(this.readyTimeout);
+            this.readyTimeout = null;
+        }
+        if (this.voteTimeout) {
+            clearTimeout(this.voteTimeout);
+            this.voteTimeout = null;
+        }
+        // Update match state
+        this.match.state = types_1.MatchState.CANCELLED;
+        await this.updateMatch();
+        // Free players
+        for (const playerId of this.match.players) {
+            await this.playerService.setPlayerMatch(playerId, undefined);
+        }
+        // Send notification if channel exists
+        if (this.channel) {
+            try {
+                await this.channel.send({
+                    content: `❌ **Match force cancelled:** ${reason}`,
+                    embeds: [{
+                            description: 'This match was cancelled by an administrator. You can now join queues again.',
+                            color: 0xFF0000
+                        }]
+                });
+            }
+            catch (error) {
+                console.error('Error sending force cancel message:', error);
+            }
+        }
+        // Mark as closed
+        this.match.state = types_1.MatchState.CLOSED;
+        await this.updateMatch();
+    }
+    async forceDelete() {
+        try {
+            if (this.channel) {
+                await this.channel.delete();
+            }
+            if (this.voiceChannel1) {
+                await this.voiceChannel1.delete();
+            }
+            if (this.voiceChannel2) {
+                await this.voiceChannel2.delete();
+            }
+            console.log(`Force deleted channels for match ${this.match.id}`);
+        }
+        catch (error) {
+            console.error('Error force deleting match channels:', error);
+        }
+    }
+    static async cleanupMatchChannels(guild, match) {
+        let deletedChannels = 0;
+        try {
+            // Delete text channel
+            if (match.discordChannelId) {
+                try {
+                    const textChannel = await guild.channels.fetch(match.discordChannelId);
+                    if (textChannel) {
+                        await textChannel.delete();
+                        deletedChannels++;
+                        console.log(`Deleted text channel ${match.discordChannelId} for match ${match.matchId}`);
+                    }
+                }
+                catch (error) {
+                    console.log(`Text channel ${match.discordChannelId} no longer exists`);
+                }
+            }
+            // Delete voice channel 1
+            if (match.discordVoiceChannel1Id) {
+                try {
+                    const voiceChannel1 = await guild.channels.fetch(match.discordVoiceChannel1Id);
+                    if (voiceChannel1) {
+                        await voiceChannel1.delete();
+                        deletedChannels++;
+                        console.log(`Deleted voice channel 1 ${match.discordVoiceChannel1Id} for match ${match.matchId}`);
+                    }
+                }
+                catch (error) {
+                    console.log(`Voice channel 1 ${match.discordVoiceChannel1Id} no longer exists`);
+                }
+            }
+            // Delete voice channel 2
+            if (match.discordVoiceChannel2Id) {
+                try {
+                    const voiceChannel2 = await guild.channels.fetch(match.discordVoiceChannel2Id);
+                    if (voiceChannel2) {
+                        await voiceChannel2.delete();
+                        deletedChannels++;
+                        console.log(`Deleted voice channel 2 ${match.discordVoiceChannel2Id} for match ${match.matchId}`);
+                    }
+                }
+                catch (error) {
+                    console.log(`Voice channel 2 ${match.discordVoiceChannel2Id} no longer exists`);
+                }
+            }
+        }
+        catch (error) {
+            console.error(`Error deleting channels for match ${match.matchId}:`, error);
+        }
+        return deletedChannels;
     }
 }
 exports.MatchHandler = MatchHandler;

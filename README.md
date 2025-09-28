@@ -10,6 +10,7 @@ A Discord bot for matchmaking in Teeworlds League with TypeScript implementation
 - **Matchmaking**: Automatic match creation when enough players join
 - **Match Flow**: Complete match lifecycle from ready-up to result voting
 - **Voice Channels**: Automatic team voice channel creation
+- **Startup Reset**: Automatically cancels all matches and clears player states on restart
 - **Database**: MongoDB integration for persistent state management
 
 ## Setup
