@@ -415,11 +415,11 @@ export class MatchHandler {
         flags: MessageFlags.Ephemeral
       });
 
-      await this.updateMatchMessage();
-      await this.updateMatch();
-
       if (this.match.readyPlayers.length === this.match.players.length) {
-        await this.startMatch();
+        await this.startMatch(); // this will update the match and the message
+      } else {
+        await this.updateMatch();
+        await this.updateMatchMessage();
       }
     } catch (error) {
       console.error('Error handling ready:', error);

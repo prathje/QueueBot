@@ -331,6 +331,7 @@ class MatchHandler {
                     content: 'You are already ready!',
                     flags: discord_js_1.MessageFlags.Ephemeral
                 });
+                await this.updateMatchMessage();
                 return;
             }
             this.match.readyPlayers.push(user.id);
@@ -338,10 +339,12 @@ class MatchHandler {
                 content: 'You are ready!',
                 flags: discord_js_1.MessageFlags.Ephemeral
             });
-            await this.updateMatchMessage();
-            await this.updateMatch();
             if (this.match.readyPlayers.length === this.match.players.length) {
                 await this.startMatch();
+            }
+            else {
+                await this.updateMatch();
+                await this.updateMatchMessage();
             }
         }
         catch (error) {
@@ -350,6 +353,7 @@ class MatchHandler {
                 content: 'An error occurred while readying up.',
                 flags: discord_js_1.MessageFlags.Ephemeral
             });
+            await this.updateMatchMessage();
         }
     }
     async startMatch() {
@@ -388,6 +392,7 @@ class MatchHandler {
                     content: 'Voting is no longer available for this match!',
                     flags: discord_js_1.MessageFlags.Ephemeral
                 });
+                await this.updateMatchMessage();
                 return;
             }
             // Remove user's previous vote if they had one
@@ -414,6 +419,7 @@ class MatchHandler {
     async checkVoteResults() {
         // Only process votes if match is still in progress
         if (this.match.state !== types_1.MatchState.IN_PROGRESS) {
+            await this.updateMatchMessage();
             return;
         }
         const totalPlayers = this.match.players.length;
@@ -677,8 +683,8 @@ class MatchHandler {
                     .setColor(0x00FF00)
                     .setTimestamp();
                 await user.send({
-                    content: `**Match Found:** ${channelLink}\n\nGood luck and have fun! 🎯`,
-                    embeds: [embed]
+                    content: `**Match Found:** ${channelLink}`,
+                    embeds: [ /*embed*/]
                 });
                 console.log(`Sent match notification to ${user.username} (${playerId})`);
             }
