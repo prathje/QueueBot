@@ -315,11 +315,11 @@ export class MatchHandler {
         flags: MessageFlags.Ephemeral
       });
 
+      await this.updateMatchMessage();
+      await this.updateMatch();
+
       if (this.match.readyPlayers.length === this.match.players.length) {
         await this.startMatch();
-      } else {
-        await this.updateMatch();
-        await this.updateMatchMessage();
       }
     } catch (error) {
       console.error('Error handling ready:', error);
@@ -343,9 +343,9 @@ export class MatchHandler {
     if (this.channel) {
       await this.channel.send({
         content: '🎮 **Match started!** Good luck and have fun!',
-        embeds: [new EmbedBuilder()
+        embeds: [/*new EmbedBuilder()
           .setDescription(`Voice channels have been created for your teams.`)
-          .setColor(0x00FF00)]
+          .setColor(0x00FF00)*/]
       });
     }
 
