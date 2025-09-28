@@ -660,7 +660,7 @@ class MatchHandler {
                     .setColor(0x00FF00)
                     .setTimestamp();
                 await user.send({
-                    content: `**Match Ready!**\n\n📍 **Channel:** ${channelLink}\n\nGood luck and have fun! 🎯`,
+                    content: `**Match Found:** ${channelLink}\n\nGood luck and have fun! 🎯`,
                     embeds: [embed]
                 });
                 console.log(`Sent match notification to ${user.username} (${playerId})`);

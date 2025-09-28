@@ -3,12 +3,14 @@ import { config, validateEnvironment } from './config/environment';
 import { connectToDatabase } from './config/database';
 import { Gamemode } from './services/gamemode';
 import { StartupResetService } from './services/startup_reset';
+import { Mutex } from './utils/mutex';
 import { GamemodeConfig } from './types';
 
 class TeeWorldsLeagueBot {
   private client: Client;
   private guild: Guild | null = null;
   private gamemodes: Map<string, Gamemode> = new Map();
+  private globalMatchmakingMutex: Mutex = new Mutex();
 
   constructor() {
     this.client = new Client({
@@ -135,7 +137,7 @@ class TeeWorldsLeagueBot {
 
     for (const gamemodeConfig of gamemodeConfigs) {
       try {
-        const gamemode = new Gamemode(this.client, this.guild!, gamemodeConfig);
+        const gamemode = new Gamemode(this.client, this.guild!, gamemodeConfig, this.globalMatchmakingMutex);
         await gamemode.initialize();
         this.gamemodes.set(gamemodeConfig.id, gamemode);
         console.log(`Initialized gamemode: ${gamemodeConfig.displayName}`);

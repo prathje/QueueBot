@@ -1,6 +1,7 @@
 import { Client, CategoryChannel, ChannelType, Guild } from 'discord.js';
 import { IGamemode, GamemodeConfig } from '../types';
 import { Queue } from './queue';
+import { Mutex } from '../utils/mutex';
 
 export class Gamemode {
   private client: Client;
@@ -8,11 +9,13 @@ export class Gamemode {
   private config: GamemodeConfig;
   private category: CategoryChannel | null = null;
   private queues: Map<string, Queue> = new Map();
+  private matchmakingMutex: Mutex;
 
-  constructor(client: Client, guild: Guild, config: GamemodeConfig) {
+  constructor(client: Client, guild: Guild, config: GamemodeConfig, matchmakingMutex: Mutex) {
     this.client = client;
     this.guild = guild;
     this.config = config;
+    this.matchmakingMutex = matchmakingMutex;
   }
 
   async initialize(): Promise<void> {
@@ -51,7 +54,7 @@ export class Gamemode {
         const queue = new Queue(this.client, this.guild, this.category, {
           ...queueConfig,
           gamemodeId: this.config.id
-        });
+        }, this.matchmakingMutex);
         await queue.initialize();
         this.queues.set(queueConfig.id, queue);
         console.log(`Initialized queue: ${queueConfig.displayName}`);

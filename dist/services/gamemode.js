@@ -4,12 +4,13 @@ exports.Gamemode = void 0;
 const discord_js_1 = require("discord.js");
 const queue_1 = require("./queue");
 class Gamemode {
-    constructor(client, guild, config) {
+    constructor(client, guild, config, matchmakingMutex) {
         this.category = null;
         this.queues = new Map();
         this.client = client;
         this.guild = guild;
         this.config = config;
+        this.matchmakingMutex = matchmakingMutex;
     }
     async initialize() {
         await this.ensureCategory();
@@ -41,7 +42,7 @@ class Gamemode {
                 const queue = new queue_1.Queue(this.client, this.guild, this.category, {
                     ...queueConfig,
                     gamemodeId: this.config.id
-                });
+                }, this.matchmakingMutex);
                 await queue.initialize();
                 this.queues.set(queueConfig.id, queue);
                 console.log(`Initialized queue: ${queueConfig.displayName}`);

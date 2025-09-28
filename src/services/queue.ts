@@ -30,13 +30,14 @@ export class Queue {
   private playerService: PlayerService;
   private matchmakingService: MatchmakingService;
   private activeMatches: Map<string, MatchHandler> = new Map();
-  private queueMutex: Mutex = new Mutex();
+  private matchmakingMutex: Mutex;
 
-  constructor(client: Client, guild: Guild, category: CategoryChannel, config: QueueConfig) {
+  constructor(client: Client, guild: Guild, category: CategoryChannel, config: QueueConfig, matchmakingMutex: Mutex) {
     this.client = client;
     this.guild = guild;
     this.category = category;
     this.config = config;
+    this.matchmakingMutex = matchmakingMutex;
     this.playerService = PlayerService.getInstance();
     this.matchmakingService = new MatchmakingService();
   }
@@ -268,7 +269,7 @@ export class Queue {
   }
 
   async checkForMatch(): Promise<void> {
-    await this.queueMutex.acquire();
+    await this.matchmakingMutex.acquire();
     try {
       const queueData: IQueue = {
         ...this.config,
@@ -304,7 +305,7 @@ export class Queue {
     } catch (error) {
       console.error('Error checking for match:', error);
     } finally {
-      this.queueMutex.release();
+      this.matchmakingMutex.release();
     }
   }
 

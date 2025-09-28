@@ -6,7 +6,7 @@ const players_1 = require("./players");
 const matchmaking_1 = require("./matchmaking");
 const match_handler_1 = require("./match_handler");
 class Queue {
-    constructor(client, guild, category, config) {
+    constructor(client, guild, category, config, matchmakingMutex) {
         this.channel = null;
         this.queueMessage = null;
         this.activeMatches = new Map();
@@ -14,6 +14,7 @@ class Queue {
         this.guild = guild;
         this.category = category;
         this.config = config;
+        this.matchmakingMutex = matchmakingMutex;
         this.playerService = players_1.PlayerService.getInstance();
         this.matchmakingService = new matchmaking_1.MatchmakingService();
     }
@@ -211,6 +212,7 @@ class Queue {
         }
     }
     async checkForMatch() {
+        await this.matchmakingMutex.acquire();
         try {
             const queueData = {
                 ...this.config,
@@ -237,6 +239,9 @@ class Queue {
         }
         catch (error) {
             console.error('Error checking for match:', error);
+        }
+        finally {
+            this.matchmakingMutex.release();
         }
     }
     getActiveMatches() {

@@ -5,10 +5,12 @@ const environment_1 = require("./config/environment");
 const database_1 = require("./config/database");
 const gamemode_1 = require("./services/gamemode");
 const startup_reset_1 = require("./services/startup_reset");
+const mutex_1 = require("./utils/mutex");
 class TeeWorldsLeagueBot {
     constructor() {
         this.guild = null;
         this.gamemodes = new Map();
+        this.globalMatchmakingMutex = new mutex_1.Mutex();
         this.client = new discord_js_1.Client({
             intents: [
                 discord_js_1.GatewayIntentBits.Guilds,
@@ -123,7 +125,7 @@ class TeeWorldsLeagueBot {
         ];
         for (const gamemodeConfig of gamemodeConfigs) {
             try {
-                const gamemode = new gamemode_1.Gamemode(this.client, this.guild, gamemodeConfig);
+                const gamemode = new gamemode_1.Gamemode(this.client, this.guild, gamemodeConfig, this.globalMatchmakingMutex);
                 await gamemode.initialize();
                 this.gamemodes.set(gamemodeConfig.id, gamemode);
                 console.log(`Initialized gamemode: ${gamemodeConfig.displayName}`);
