@@ -9,7 +9,8 @@ import {
   ButtonStyle,
   EmbedBuilder,
   ButtonInteraction,
-  Message
+  Message,
+  MessageFlags
 } from 'discord.js';
 import { IQueue } from '../types';
 import { PlayerService } from './players';
@@ -174,7 +175,7 @@ export class Queue {
         console.log(`Player ${user.username} (${user.id}) tried to join queue but is in match: ${player?.currentMatch}`);
         await interaction.reply({
           content: 'You are already in a match!',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -182,7 +183,7 @@ export class Queue {
       if (this.playerService.isPlayerInQueue(user.id, this.config.id)) {
         await interaction.reply({
           content: 'You are already in this queue!',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -190,7 +191,7 @@ export class Queue {
       await this.playerService.addPlayerToQueue(user.id, this.config.id);
       await interaction.reply({
         content: `You joined the ${this.config.displayName} queue!`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
 
       await this.updateQueueMessage();
@@ -200,7 +201,7 @@ export class Queue {
       console.error('Error handling join queue:', error);
       await interaction.reply({
         content: 'An error occurred while joining the queue.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -212,7 +213,7 @@ export class Queue {
       if (!this.playerService.isPlayerInQueue(user.id, this.config.id)) {
         await interaction.reply({
           content: 'You are not in this queue!',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -220,7 +221,7 @@ export class Queue {
       await this.playerService.removePlayerFromQueue(user.id, this.config.id);
       await interaction.reply({
         content: `You left the ${this.config.displayName} queue!`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
 
       await this.updateQueueMessage();
@@ -229,7 +230,7 @@ export class Queue {
       console.error('Error handling leave queue:', error);
       await interaction.reply({
         content: 'An error occurred while leaving the queue.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }

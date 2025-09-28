@@ -10,7 +10,8 @@ import {
   EmbedBuilder,
   ButtonInteraction,
   Message,
-  PermissionFlagsBits
+  PermissionFlagsBits,
+  MessageFlags
 } from 'discord.js';
 import { IMatch, MatchState } from '../types';
 import { Match } from '../models/Match';
@@ -286,7 +287,7 @@ export class MatchHandler {
       if (!this.match.players.includes(user.id)) {
         await interaction.reply({
           content: 'You are not in this match!',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -294,7 +295,7 @@ export class MatchHandler {
       if (this.match.readyPlayers.includes(user.id)) {
         await interaction.reply({
           content: 'You are already ready!',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -302,7 +303,7 @@ export class MatchHandler {
       this.match.readyPlayers.push(user.id);
       await interaction.reply({
         content: 'You are ready!',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
 
       if (this.match.readyPlayers.length === this.match.players.length) {
@@ -315,7 +316,7 @@ export class MatchHandler {
       console.error('Error handling ready:', error);
       await interaction.reply({
         content: 'An error occurred while readying up.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
@@ -351,7 +352,7 @@ export class MatchHandler {
       if (!this.match.players.includes(user.id)) {
         await interaction.reply({
           content: 'You are not in this match!',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -363,7 +364,7 @@ export class MatchHandler {
       if (hasVoted) {
         await interaction.reply({
           content: 'You have already voted!',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -373,7 +374,7 @@ export class MatchHandler {
       const voteLabels = { team1: 'Team 1', team2: 'Team 2', cancel: 'Cancel' };
       await interaction.reply({
         content: `You voted for ${voteLabels[voteType]}!`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
 
       await this.checkVoteResults();
@@ -381,7 +382,7 @@ export class MatchHandler {
       console.error('Error handling vote:', error);
       await interaction.reply({
         content: 'An error occurred while voting.',
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }

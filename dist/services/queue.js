@@ -133,21 +133,21 @@ class Queue {
                 console.log(`Player ${user.username} (${user.id}) tried to join queue but is in match: ${player?.currentMatch}`);
                 await interaction.reply({
                     content: 'You are already in a match!',
-                    ephemeral: true
+                    flags: discord_js_1.MessageFlags.Ephemeral
                 });
                 return;
             }
             if (this.playerService.isPlayerInQueue(user.id, this.config.id)) {
                 await interaction.reply({
                     content: 'You are already in this queue!',
-                    ephemeral: true
+                    flags: discord_js_1.MessageFlags.Ephemeral
                 });
                 return;
             }
             await this.playerService.addPlayerToQueue(user.id, this.config.id);
             await interaction.reply({
                 content: `You joined the ${this.config.displayName} queue!`,
-                ephemeral: true
+                flags: discord_js_1.MessageFlags.Ephemeral
             });
             await this.updateQueueMessage();
             await this.checkForMatch();
@@ -156,7 +156,7 @@ class Queue {
             console.error('Error handling join queue:', error);
             await interaction.reply({
                 content: 'An error occurred while joining the queue.',
-                ephemeral: true
+                flags: discord_js_1.MessageFlags.Ephemeral
             });
         }
     }
@@ -166,14 +166,14 @@ class Queue {
             if (!this.playerService.isPlayerInQueue(user.id, this.config.id)) {
                 await interaction.reply({
                     content: 'You are not in this queue!',
-                    ephemeral: true
+                    flags: discord_js_1.MessageFlags.Ephemeral
                 });
                 return;
             }
             await this.playerService.removePlayerFromQueue(user.id, this.config.id);
             await interaction.reply({
                 content: `You left the ${this.config.displayName} queue!`,
-                ephemeral: true
+                flags: discord_js_1.MessageFlags.Ephemeral
             });
             await this.updateQueueMessage();
         }
@@ -181,7 +181,7 @@ class Queue {
             console.error('Error handling leave queue:', error);
             await interaction.reply({
                 content: 'An error occurred while leaving the queue.',
-                ephemeral: true
+                flags: discord_js_1.MessageFlags.Ephemeral
             });
         }
     }
