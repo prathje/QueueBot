@@ -33,7 +33,7 @@ export class MatchHandler {
   private queueAutojoin: Set<string> = new Set();
   private onPlayerJoinQueue: ((playerId: string, queueId: string) => Promise<boolean>) | null = null;
 
-  private static readonly READY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+  private static readonly READY_TIMEOUT = 1 * 60 * 1000; // 1 minute
   private static readonly VOTE_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
 
   constructor(
@@ -541,14 +541,14 @@ export class MatchHandler {
       await this.channel.send({
         content: `🏆 **Match completed!** Team ${winningTeam} wins!`,
         embeds: [new EmbedBuilder()
-          .setDescription('GG! The match will be closed in 30 seconds.')
+          .setDescription('GG! The match will be closed in 10 seconds.')
           .setColor(0xFFD700)]
       });
     }
 
     setTimeout(async () => {
       await this.closeMatch();
-    }, 30000);
+    }, 10000);
   }
 
   private async cancelMatch(reason: string): Promise<void> {
@@ -620,14 +620,21 @@ export class MatchHandler {
     try {
       if (this.channel) {
         await this.channel.delete();
+        this.match.discordChannelId = null;
+        this.channel = null;
       }
       if (this.voiceChannel1) {
         await this.voiceChannel1.delete();
+        this.match.discordVoiceChannel1Id = null;
+        this.voiceChannel1 = null;
       }
       if (this.voiceChannel2) {
         await this.voiceChannel2.delete();
+        this.match.discordVoiceChannel2Id = null;
+        this.voiceChannel2 = null;
       }
       console.log(`Match ${this.match.id} closed and channels deleted`);
+      await this.updateMatch();
     } catch (error) {
       console.error('Error deleting match channels:', error);
     }
@@ -714,13 +721,21 @@ export class MatchHandler {
     try {
       if (this.channel) {
         await this.channel.delete();
+        this.match.discordChannelId = null;
+        this.channel = null;
       }
       if (this.voiceChannel1) {
         await this.voiceChannel1.delete();
+        this.match.discordVoiceChannel1Id = null;
+        this.voiceChannel1 = null;
       }
       if (this.voiceChannel2) {
         await this.voiceChannel2.delete();
+        this.match.discordVoiceChannel2Id = null;
+        this.voiceChannel2 = null;
       }
+      console.log(`Match ${this.match.id} closed and channels deleted`);
+      await this.updateMatch();
       console.log(`Force deleted channels for match ${this.match.id}`);
     } catch (error) {
       console.error('Error force deleting match channels:', error);
