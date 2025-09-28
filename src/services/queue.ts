@@ -16,6 +16,7 @@ import { IQueue } from '../types';
 import { PlayerService } from './players';
 import { MatchmakingService } from './matchmaking';
 import { MatchHandler } from './match_handler';
+import { Mutex } from '../utils/mutex';
 
 interface QueueConfig extends Omit<IQueue, 'players' | 'discordChannelId'> {}
 
@@ -29,6 +30,7 @@ export class Queue {
   private playerService: PlayerService;
   private matchmakingService: MatchmakingService;
   private activeMatches: Map<string, MatchHandler> = new Map();
+  private queueMutex: Mutex = new Mutex();
 
   constructor(client: Client, guild: Guild, category: CategoryChannel, config: QueueConfig) {
     this.client = client;
@@ -43,6 +45,7 @@ export class Queue {
     await this.ensureChannel();
     await this.setupQueueMessage();
     this.setupInteractionHandlers();
+
   }
 
   private async ensureChannel(): Promise<void> {
@@ -264,7 +267,8 @@ export class Queue {
     }
   }
 
-  private async checkForMatch(): Promise<void> {
+  async checkForMatch(): Promise<void> {
+    await this.queueMutex.acquire();
     try {
       const queueData: IQueue = {
         ...this.config,
@@ -299,6 +303,8 @@ export class Queue {
       }
     } catch (error) {
       console.error('Error checking for match:', error);
+    } finally {
+      this.queueMutex.release();
     }
   }
 
@@ -325,6 +331,7 @@ export class Queue {
   async shutdown(): Promise<void> {
     try {
       console.log(`Shutting down queue: ${this.config.displayName}`);
+
 
       // Cancel all active matches in this queue
       await this.cancelActiveMatches();
