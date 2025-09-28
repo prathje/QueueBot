@@ -37,6 +37,7 @@ export declare class MatchHandler {
     getState(): MatchState;
     forceCancel(reason?: string): Promise<void>;
     forceDelete(): Promise<void>;
+    private notifyPlayersOfMatchChannel;
     static cleanupMatchChannels(guild: Guild, match: {
         matchId: string;
         discordChannelId?: string;

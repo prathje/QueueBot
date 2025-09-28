@@ -95,6 +95,8 @@ class MatchHandler {
             });
             this.match.discordChannelId = this.channel.id;
             console.log(`Created match channel: ${channelName}`);
+            // Send private messages to all players with match channel link
+            await this.notifyPlayersOfMatchChannel();
         }
         catch (error) {
             console.error('Error creating match channel:', error);
@@ -506,6 +508,32 @@ class MatchHandler {
         }
         catch (error) {
             console.error('Error force deleting match channels:', error);
+        }
+    }
+    async notifyPlayersOfMatchChannel() {
+        if (!this.channel) {
+            console.error('Cannot notify players: match channel not created');
+            return;
+        }
+        const channelLink = `https://discord.com/channels/${this.guild.id}/${this.channel.id}`;
+        for (const playerId of this.match.players) {
+            try {
+                const user = await this.client.users.fetch(playerId);
+                const embed = new discord_js_1.EmbedBuilder()
+                    .setTitle('🎮 Match Found!')
+                    .setDescription(`Your match is ready! Click the link below to join the match channel.`)
+                    .addFields({ name: 'Match ID', value: this.match.id.slice(0, 8), inline: true }, { name: 'Map', value: this.match.map, inline: true }, { name: 'Players', value: `${this.match.players.length} players`, inline: true })
+                    .setColor(0x00FF00)
+                    .setTimestamp();
+                await user.send({
+                    content: `🔔 **Match Ready!**\n\n📍 **Match Channel:** ${channelLink}\n\nGood luck and have fun! 🎯`,
+                    embeds: [embed]
+                });
+                console.log(`Sent match notification to ${user.username} (${playerId})`);
+            }
+            catch (error) {
+                console.log(`Could not send match notification to player ${playerId}:`, error instanceof Error ? error.message : String(error));
+            }
         }
     }
     static async cleanupMatchChannels(guild, match) {
