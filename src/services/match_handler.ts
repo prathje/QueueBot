@@ -35,6 +35,7 @@ export class MatchHandler {
   private onPlayerJoinQueue: ((playerId: string, queueId: string) => Promise<boolean>) | null = null;
   private onMatchClose: ((matchId: string) => void) | null = null;
   private interactionListener: ((interaction: any) => Promise<void>) | null = null;
+  private playerNotificationMessages: Map<string, Message> = new Map();
 
   private static readonly READY_TIMEOUT = 1 * 60 * 1000; // 1 minute
   private static readonly VOTE_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
@@ -614,6 +615,9 @@ export class MatchHandler {
     // Clean up event listeners first
     this.cleanupInteractionHandlers();
 
+    // Clean up player notification messages
+    await this.cleanupPlayerNotifications();
+
     for (const playerId of this.match.players) {
       await this.playerService.setPlayerMatch(playerId, null);
     }
@@ -711,6 +715,9 @@ export class MatchHandler {
     // Clean up event listeners
     this.cleanupInteractionHandlers();
 
+    // Clean up player notification messages
+    await this.cleanupPlayerNotifications();
+
     // Clear any timeouts
     if (this.readyTimeout) {
       clearTimeout(this.readyTimeout);
@@ -754,6 +761,9 @@ export class MatchHandler {
     try {
       // Clean up event listeners first
       this.cleanupInteractionHandlers();
+
+      // Clean up player notification messages
+      await this.cleanupPlayerNotifications();
       if (this.channel) {
         await this.channel.delete();
         this.match.discordChannelId = null;
@@ -805,16 +815,38 @@ export class MatchHandler {
           .setColor(0x00FF00)
           .setTimestamp();
 
-        await user.send({
+        const notificationMessage = await user.send({
           content: `**Match Found:** ${channelLink}`,
           embeds: [/*embed*/]
         });
+
+        // Store the message reference for later deletion
+        this.playerNotificationMessages.set(playerId, notificationMessage);
 
         console.log(`Sent match notification to ${user.username} (${playerId})`);
       } catch (error) {
         console.log(`Could not send match notification to player ${playerId}:`, error instanceof Error ? error.message : String(error));
       }
     }
+  }
+
+  private async cleanupPlayerNotifications(): Promise<void> {
+    if (this.playerNotificationMessages.size === 0) {
+      return;
+    }
+
+    console.log(`Cleaning up ${this.playerNotificationMessages.size} player notification messages`);
+
+    for (const [playerId, message] of this.playerNotificationMessages) {
+      try {
+        await message.delete();
+        console.log(`Deleted notification message for player ${playerId}`);
+      } catch (error) {
+        console.log(`Could not delete notification message for player ${playerId}:`, error instanceof Error ? error.message : String(error));
+      }
+    }
+
+    this.playerNotificationMessages.clear();
   }
 
   static async cleanupMatchChannels(guild: Guild, match: { matchId: string; discordChannelId: string | null; discordVoiceChannel1Id: string | null; discordVoiceChannel2Id: string | null }): Promise<number> {

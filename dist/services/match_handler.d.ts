@@ -15,6 +15,7 @@ export declare class MatchHandler {
     private onPlayerJoinQueue;
     private onMatchClose;
     private interactionListener;
+    private playerNotificationMessages;
     private static readonly READY_TIMEOUT;
     private static readonly VOTE_TIMEOUT;
     constructor(client: Client, guild: Guild, match: IMatch, onPlayerJoinQueue?: (playerId: string, queueId: string) => Promise<boolean>, onMatchClose?: (matchId: string) => void);
@@ -44,6 +45,7 @@ export declare class MatchHandler {
     forceCancel(reason?: string): Promise<void>;
     forceDelete(): Promise<void>;
     private notifyPlayersOfMatchChannel;
+    private cleanupPlayerNotifications;
     static cleanupMatchChannels(guild: Guild, match: {
         matchId: string;
         discordChannelId: string | null;

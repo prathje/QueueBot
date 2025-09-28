@@ -20,6 +20,7 @@ class MatchHandler {
         this.onPlayerJoinQueue = null;
         this.onMatchClose = null;
         this.interactionListener = null;
+        this.playerNotificationMessages = new Map();
         this.client = client;
         this.guild = guild;
         this.match = match;
@@ -340,7 +341,7 @@ class MatchHandler {
                 flags: discord_js_1.MessageFlags.Ephemeral
             });
             if (this.match.readyPlayers.length === this.match.players.length) {
-                await this.startMatch();
+                await this.startMatch(); // this will update the match and the message
             }
             else {
                 await this.updateMatch();
@@ -514,6 +515,8 @@ class MatchHandler {
         await this.updateMatch();
         // Clean up event listeners first
         this.cleanupInteractionHandlers();
+        // Clean up player notification messages
+        await this.cleanupPlayerNotifications();
         for (const playerId of this.match.players) {
             await this.playerService.setPlayerMatch(playerId, null);
         }
@@ -601,6 +604,8 @@ class MatchHandler {
         console.log(`Force cancelling match ${this.match.id}: ${reason}`);
         // Clean up event listeners
         this.cleanupInteractionHandlers();
+        // Clean up player notification messages
+        await this.cleanupPlayerNotifications();
         // Clear any timeouts
         if (this.readyTimeout) {
             clearTimeout(this.readyTimeout);
@@ -640,6 +645,8 @@ class MatchHandler {
         try {
             // Clean up event listeners first
             this.cleanupInteractionHandlers();
+            // Clean up player notification messages
+            await this.cleanupPlayerNotifications();
             if (this.channel) {
                 await this.channel.delete();
                 this.match.discordChannelId = null;
@@ -682,16 +689,34 @@ class MatchHandler {
                     .addFields({ name: 'Match ID', value: this.match.id.slice(0, 8), inline: true }, { name: 'Map', value: this.match.map, inline: true }, { name: 'Players', value: `${this.match.players.length} players`, inline: true })
                     .setColor(0x00FF00)
                     .setTimestamp();
-                await user.send({
+                const notificationMessage = await user.send({
                     content: `**Match Found:** ${channelLink}`,
                     embeds: [ /*embed*/]
                 });
+                // Store the message reference for later deletion
+                this.playerNotificationMessages.set(playerId, notificationMessage);
                 console.log(`Sent match notification to ${user.username} (${playerId})`);
             }
             catch (error) {
                 console.log(`Could not send match notification to player ${playerId}:`, error instanceof Error ? error.message : String(error));
             }
         }
+    }
+    async cleanupPlayerNotifications() {
+        if (this.playerNotificationMessages.size === 0) {
+            return;
+        }
+        console.log(`Cleaning up ${this.playerNotificationMessages.size} player notification messages`);
+        for (const [playerId, message] of this.playerNotificationMessages) {
+            try {
+                await message.delete();
+                console.log(`Deleted notification message for player ${playerId}`);
+            }
+            catch (error) {
+                console.log(`Could not delete notification message for player ${playerId}:`, error instanceof Error ? error.message : String(error));
+            }
+        }
+        this.playerNotificationMessages.clear();
     }
     static async cleanupMatchChannels(guild, match) {
         let deletedChannels = 0;
