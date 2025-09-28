@@ -32,6 +32,7 @@ export class MatchHandler {
   private voteTimeout: NodeJS.Timeout | null = null;
   private queueAutojoin: Set<string> = new Set();
   private onPlayerJoinQueue: ((playerId: string, queueId: string) => Promise<boolean>) | null = null;
+  private onMatchClose: ((matchId: string) => void) | null = null;
 
   private static readonly READY_TIMEOUT = 1 * 60 * 1000; // 1 minute
   private static readonly VOTE_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
@@ -40,13 +41,15 @@ export class MatchHandler {
     client: Client,
     guild: Guild,
     match: IMatch,
-    onPlayerJoinQueue?: (playerId: string, queueId: string) => Promise<boolean>
+    onPlayerJoinQueue?: (playerId: string, queueId: string) => Promise<boolean>,
+    onMatchClose?: (matchId: string) => void
   ) {
     this.client = client;
     this.guild = guild;
     this.match = match;
     this.playerService = PlayerService.getInstance();
     this.onPlayerJoinQueue = onPlayerJoinQueue || null;
+    this.onMatchClose = onMatchClose || null;
   }
 
   async initialize(): Promise<void> {
@@ -635,6 +638,11 @@ export class MatchHandler {
       }
       console.log(`Match ${this.match.id} closed and channels deleted`);
       await this.updateMatch();
+
+      // Notify queue to remove this match handler
+      if (this.onMatchClose) {
+        this.onMatchClose(this.match.id);
+      }
     } catch (error) {
       console.error('Error deleting match channels:', error);
     }
@@ -737,6 +745,11 @@ export class MatchHandler {
       console.log(`Match ${this.match.id} closed and channels deleted`);
       await this.updateMatch();
       console.log(`Force deleted channels for match ${this.match.id}`);
+
+      // Notify queue to remove this match handler
+      if (this.onMatchClose) {
+        this.onMatchClose(this.match.id);
+      }
     } catch (error) {
       console.error('Error force deleting match channels:', error);
     }
@@ -766,7 +779,7 @@ export class MatchHandler {
           .setTimestamp();
 
         await user.send({
-          content: `🔔 **Match Ready!**\n\n📍 **Match Channel:** ${channelLink}\n\nGood luck and have fun! 🎯`,
+          content: `**Match Found:** ${channelLink}\n\nGood luck and have fun! 🎯`,
           embeds: [embed]
         });
 

@@ -226,6 +226,9 @@ class Queue {
                         return await this.addPlayerToQueueProgrammatically(playerId);
                     }
                     return false;
+                }, (matchId) => {
+                    // Callback to handle match cleanup
+                    this.removeMatch(matchId);
                 });
                 await matchHandler.initialize();
                 this.activeMatches.set(match.id, matchHandler);

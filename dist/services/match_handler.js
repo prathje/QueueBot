@@ -8,7 +8,7 @@ const MatchResult_1 = require("../models/MatchResult");
 const players_1 = require("./players");
 const utils_1 = require("../utils");
 class MatchHandler {
-    constructor(client, guild, match, onPlayerJoinQueue) {
+    constructor(client, guild, match, onPlayerJoinQueue, onMatchClose) {
         this.channel = null;
         this.voiceChannel1 = null;
         this.voiceChannel2 = null;
@@ -17,11 +17,13 @@ class MatchHandler {
         this.voteTimeout = null;
         this.queueAutojoin = new Set();
         this.onPlayerJoinQueue = null;
+        this.onMatchClose = null;
         this.client = client;
         this.guild = guild;
         this.match = match;
         this.playerService = players_1.PlayerService.getInstance();
         this.onPlayerJoinQueue = onPlayerJoinQueue || null;
+        this.onMatchClose = onMatchClose || null;
     }
     async initialize() {
         await this.saveMatch();
@@ -226,11 +228,13 @@ class MatchHandler {
                 .setStyle(discord_js_1.ButtonStyle.Danger));
         }
         else if (this.match.state === types_1.MatchState.COMPLETED || this.match.state === types_1.MatchState.CANCELLED) {
-            return new discord_js_1.ActionRowBuilder()
-                .addComponents(new discord_js_1.ButtonBuilder()
-                .setCustomId(`autojoin_queue_${this.match.id}`)
-                .setLabel('🔄 Auto-join Next Queue')
-                .setStyle(discord_js_1.ButtonStyle.Secondary));
+            if (this.onPlayerJoinQueue) { // we only show autojoin if we have a callback to rejoin!
+                return new discord_js_1.ActionRowBuilder()
+                    .addComponents(new discord_js_1.ButtonBuilder()
+                    .setCustomId(`autojoin_queue_${this.match.id}`)
+                    .setLabel('🔄 Auto-join Next Queue')
+                    .setStyle(discord_js_1.ButtonStyle.Secondary));
+            }
         }
         return null;
     }
@@ -452,13 +456,13 @@ class MatchHandler {
             await this.channel.send({
                 content: `🏆 **Match completed!** Team ${winningTeam} wins!`,
                 embeds: [new discord_js_1.EmbedBuilder()
-                        .setDescription('GG! The match will be closed in 30 seconds.')
+                        .setDescription('GG! The match will be closed in 10 seconds.')
                         .setColor(0xFFD700)]
             });
         }
         setTimeout(async () => {
             await this.closeMatch();
-        }, 30000);
+        }, 10000);
     }
     async cancelMatch(reason) {
         if (this.readyTimeout) {
@@ -511,11 +515,6 @@ class MatchHandler {
                             console.log(`Failed to auto-rejoin player ${playerId} to queue ${this.match.queueId} (validation failed)`);
                         }
                     }
-                    else {
-                        // Fallback to direct PlayerService call if no callback
-                        await this.playerService.addPlayerToQueue(playerId, this.match.queueId);
-                        console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId} (fallback)`);
-                    }
                 }
                 catch (error) {
                     console.error(`Failed to auto-rejoin player ${playerId} to queue:`, error);
@@ -525,14 +524,25 @@ class MatchHandler {
         try {
             if (this.channel) {
                 await this.channel.delete();
+                this.match.discordChannelId = null;
+                this.channel = null;
             }
             if (this.voiceChannel1) {
                 await this.voiceChannel1.delete();
+                this.match.discordVoiceChannel1Id = null;
+                this.voiceChannel1 = null;
             }
             if (this.voiceChannel2) {
                 await this.voiceChannel2.delete();
+                this.match.discordVoiceChannel2Id = null;
+                this.voiceChannel2 = null;
             }
             console.log(`Match ${this.match.id} closed and channels deleted`);
+            await this.updateMatch();
+            // Notify queue to remove this match handler
+            if (this.onMatchClose) {
+                this.onMatchClose(this.match.id);
+            }
         }
         catch (error) {
             console.error('Error deleting match channels:', error);
@@ -609,14 +619,26 @@ class MatchHandler {
         try {
             if (this.channel) {
                 await this.channel.delete();
+                this.match.discordChannelId = null;
+                this.channel = null;
             }
             if (this.voiceChannel1) {
                 await this.voiceChannel1.delete();
+                this.match.discordVoiceChannel1Id = null;
+                this.voiceChannel1 = null;
             }
             if (this.voiceChannel2) {
                 await this.voiceChannel2.delete();
+                this.match.discordVoiceChannel2Id = null;
+                this.voiceChannel2 = null;
             }
+            console.log(`Match ${this.match.id} closed and channels deleted`);
+            await this.updateMatch();
             console.log(`Force deleted channels for match ${this.match.id}`);
+            // Notify queue to remove this match handler
+            if (this.onMatchClose) {
+                this.onMatchClose(this.match.id);
+            }
         }
         catch (error) {
             console.error('Error force deleting match channels:', error);
@@ -638,7 +660,7 @@ class MatchHandler {
                     .setColor(0x00FF00)
                     .setTimestamp();
                 await user.send({
-                    content: `🔔 **Match Ready!**\n\n📍 **Match Channel:** ${channelLink}\n\nGood luck and have fun! 🎯`,
+                    content: `**Match Ready!**\n\n📍 **Channel:** ${channelLink}\n\nGood luck and have fun! 🎯`,
                     embeds: [embed]
                 });
                 console.log(`Sent match notification to ${user.username} (${playerId})`);
@@ -701,6 +723,6 @@ class MatchHandler {
     }
 }
 exports.MatchHandler = MatchHandler;
-MatchHandler.READY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+MatchHandler.READY_TIMEOUT = 1 * 60 * 1000; // 1 minute
 MatchHandler.VOTE_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
 //# sourceMappingURL=match_handler.js.map

@@ -13,9 +13,10 @@ export declare class MatchHandler {
     private voteTimeout;
     private queueAutojoin;
     private onPlayerJoinQueue;
+    private onMatchClose;
     private static readonly READY_TIMEOUT;
     private static readonly VOTE_TIMEOUT;
-    constructor(client: Client, guild: Guild, match: IMatch, onPlayerJoinQueue?: (playerId: string, queueId: string) => Promise<boolean>);
+    constructor(client: Client, guild: Guild, match: IMatch, onPlayerJoinQueue?: (playerId: string, queueId: string) => Promise<boolean>, onMatchClose?: (matchId: string) => void);
     initialize(): Promise<void>;
     private saveMatch;
     private updateMatch;
