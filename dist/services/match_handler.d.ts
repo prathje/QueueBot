@@ -1,0 +1,39 @@
+import { Client, Guild } from 'discord.js';
+import { IMatch, MatchState } from '../types';
+export declare class MatchHandler {
+    private client;
+    private guild;
+    private match;
+    private channel;
+    private voiceChannel1;
+    private voiceChannel2;
+    private matchMessage;
+    private playerService;
+    private readyTimeout;
+    private voteTimeout;
+    private static readonly READY_TIMEOUT;
+    private static readonly VOTE_TIMEOUT;
+    constructor(client: Client, guild: Guild, match: IMatch);
+    initialize(): Promise<void>;
+    private saveMatch;
+    private updateMatch;
+    private createMatchChannel;
+    private createVoiceChannels;
+    private setupMatchMessage;
+    private createMatchEmbed;
+    private createMatchButtons;
+    private setupInteractionHandlers;
+    private startReadyPhase;
+    private handleReady;
+    private startMatch;
+    private handleVote;
+    private checkVoteResults;
+    private completeMatch;
+    private cancelMatch;
+    private closeMatch;
+    private updateMatchMessage;
+    getMatch(): IMatch;
+    getId(): string;
+    getState(): MatchState;
+}
+//# sourceMappingURL=match_handler.d.ts.map
