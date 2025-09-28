@@ -105,6 +105,10 @@ export class MatchHandler {
             id: this.guild.roles.everyone.id,
             deny: [PermissionFlagsBits.ViewChannel]
           },
+          {
+            id: this.client.user!.id,
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels]
+          },
           ...this.match.players.map(playerId => ({
             id: playerId,
             allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages]
@@ -132,6 +136,10 @@ export class MatchHandler {
             id: this.guild.roles.everyone.id,
             deny: [PermissionFlagsBits.ViewChannel]
           },
+          {
+            id: this.client.user!.id,
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.ManageChannels]
+          },
           ...this.match.teams.team1.map(playerId => ({
             id: playerId,
             allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
@@ -146,6 +154,10 @@ export class MatchHandler {
           {
             id: this.guild.roles.everyone.id,
             deny: [PermissionFlagsBits.ViewChannel]
+          },
+          {
+            id: this.client.user!.id,
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.ManageChannels]
           },
           ...this.match.teams.team2.map(playerId => ({
             id: playerId,
@@ -517,5 +529,64 @@ export class MatchHandler {
 
   getState(): MatchState {
     return this.match.state;
+  }
+
+  async forceCancel(reason: string = 'Force cancelled by administrator'): Promise<void> {
+    console.log(`Force cancelling match ${this.match.id}: ${reason}`);
+
+    // Clear any timeouts
+    if (this.readyTimeout) {
+      clearTimeout(this.readyTimeout);
+      this.readyTimeout = null;
+    }
+    if (this.voteTimeout) {
+      clearTimeout(this.voteTimeout);
+      this.voteTimeout = null;
+    }
+
+    // Update match state
+    this.match.state = MatchState.CANCELLED;
+    await this.updateMatch();
+
+    // Free players
+    for (const playerId of this.match.players) {
+      await this.playerService.setPlayerMatch(playerId, undefined);
+    }
+
+    // Send notification if channel exists
+    if (this.channel) {
+      try {
+        await this.channel.send({
+          content: `❌ **Match force cancelled:** ${reason}`,
+          embeds: [{
+            description: 'This match was cancelled by an administrator. You can now join queues again.',
+            color: 0xFF0000
+          }]
+        });
+      } catch (error) {
+        console.error('Error sending force cancel message:', error);
+      }
+    }
+
+    // Mark as closed
+    this.match.state = MatchState.CLOSED;
+    await this.updateMatch();
+  }
+
+  async forceDelete(): Promise<void> {
+    try {
+      if (this.channel) {
+        await this.channel.delete();
+      }
+      if (this.voiceChannel1) {
+        await this.voiceChannel1.delete();
+      }
+      if (this.voiceChannel2) {
+        await this.voiceChannel2.delete();
+      }
+      console.log(`Force deleted channels for match ${this.match.id}`);
+    } catch (error) {
+      console.error('Error force deleting match channels:', error);
+    }
   }
 }
