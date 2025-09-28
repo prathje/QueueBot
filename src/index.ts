@@ -149,8 +149,8 @@ class TeeWorldsLeagueBot {
     try {
       console.log('Shutting down bot...');
 
-      // Shutdown all gamemodes and queues
-      console.log('Shutting down queues...');
+      // Shutdown all gamemodes and queues (this will cancel active matches)
+      console.log('Shutting down queues and cancelling active matches...');
       for (const gamemode of this.gamemodes.values()) {
         await gamemode.shutdown();
       }
@@ -166,6 +166,7 @@ class TeeWorldsLeagueBot {
       process.exit(1);
     }
   }
+
 }
 
 const bot = new TeeWorldsLeagueBot();

@@ -282,6 +282,9 @@ export class Queue {
     try {
       console.log(`Shutting down queue: ${this.config.displayName}`);
 
+      // Cancel all active matches in this queue
+      await this.cancelActiveMatches();
+
       if (this.queueMessage) {
         const shutdownEmbed = new EmbedBuilder()
           .setTitle(`${this.config.displayName} Queue`)
@@ -317,6 +320,32 @@ export class Queue {
       }
     } catch (error) {
       console.error(`Error shutting down queue ${this.config.displayName}:`, error);
+    }
+  }
+
+  private async cancelActiveMatches(): Promise<void> {
+    try {
+      if (this.activeMatches.size === 0) {
+        return;
+      }
+
+      console.log(`Cancelling ${this.activeMatches.size} active matches in queue ${this.config.displayName}`);
+
+      const matchHandlers = Array.from(this.activeMatches.values());
+
+      for (const matchHandler of matchHandlers) {
+        try {
+          await matchHandler.forceCancel('Queue shutdown - bot is restarting');
+          await matchHandler.forceDelete();
+          this.removeMatch(matchHandler.getId());
+        } catch (error) {
+          console.error(`Error cancelling match ${matchHandler.getId()}:`, error);
+        }
+      }
+
+      console.log(`Cancelled all active matches in queue ${this.config.displayName}`);
+    } catch (error) {
+      console.error(`Error cancelling active matches in queue ${this.config.displayName}:`, error);
     }
   }
 }

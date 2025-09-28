@@ -31,6 +31,7 @@ export declare class Queue {
     getDisplayName(): string;
     getChannel(): TextChannel | null;
     shutdown(): Promise<void>;
+    private cancelActiveMatches;
 }
 export {};
 //# sourceMappingURL=queue.d.ts.map
