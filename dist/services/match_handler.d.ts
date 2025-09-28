@@ -11,6 +11,7 @@ export declare class MatchHandler {
     private playerService;
     private readyTimeout;
     private voteTimeout;
+    private queueAutojoin;
     private static readonly READY_TIMEOUT;
     private static readonly VOTE_TIMEOUT;
     constructor(client: Client, guild: Guild, match: IMatch);
@@ -23,6 +24,7 @@ export declare class MatchHandler {
     private createMatchEmbed;
     private createMatchButtons;
     private setupInteractionHandlers;
+    private handleAutojoinRegistration;
     private startReadyPhase;
     private handleReady;
     private startMatch;

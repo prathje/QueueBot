@@ -14,6 +14,7 @@ class MatchHandler {
         this.matchMessage = null;
         this.readyTimeout = null;
         this.voteTimeout = null;
+        this.queueAutojoin = new Set();
         this.client = client;
         this.guild = guild;
         this.match = match;
@@ -221,6 +222,13 @@ class MatchHandler {
                 .setLabel('Cancel Match')
                 .setStyle(discord_js_1.ButtonStyle.Danger));
         }
+        else if (this.match.state === types_1.MatchState.COMPLETED || this.match.state === types_1.MatchState.CANCELLED) {
+            return new discord_js_1.ActionRowBuilder()
+                .addComponents(new discord_js_1.ButtonBuilder()
+                .setCustomId(`autojoin_queue_${this.match.id}`)
+                .setLabel('🔄 Auto-join Next Queue')
+                .setStyle(discord_js_1.ButtonStyle.Secondary));
+        }
         return null;
     }
     setupInteractionHandlers() {
@@ -240,7 +248,47 @@ class MatchHandler {
             else if (customId === `vote_cancel_${this.match.id}`) {
                 await this.handleVote(interaction, 'cancel');
             }
+            else if (customId === `autojoin_queue_${this.match.id}`) {
+                await this.handleAutojoinRegistration(interaction);
+            }
         });
+    }
+    async handleAutojoinRegistration(interaction) {
+        try {
+            const { user } = interaction;
+            // Check if user was in this match
+            if (!this.match.players.includes(user.id)) {
+                await interaction.reply({
+                    content: 'You were not in this match!',
+                    flags: discord_js_1.MessageFlags.Ephemeral
+                });
+                return;
+            }
+            // Check if they're already registered for autojoin
+            if (this.queueAutojoin.has(user.id)) {
+                // Remove from autojoin
+                this.queueAutojoin.delete(user.id);
+                await interaction.reply({
+                    content: '❌ Removed from auto-join list. You will not automatically rejoin the queue.',
+                    flags: discord_js_1.MessageFlags.Ephemeral
+                });
+            }
+            else {
+                // Add to autojoin
+                this.queueAutojoin.add(user.id);
+                await interaction.reply({
+                    content: '✅ Added to auto-join list! You will automatically rejoin the queue when this match closes.',
+                    flags: discord_js_1.MessageFlags.Ephemeral
+                });
+            }
+        }
+        catch (error) {
+            console.error('Error handling autojoin registration:', error);
+            await interaction.reply({
+                content: 'An error occurred while registering for auto-join.',
+                flags: discord_js_1.MessageFlags.Ephemeral
+            });
+        }
     }
     async startReadyPhase() {
         this.match.state = types_1.MatchState.READY_UP;
@@ -442,6 +490,24 @@ class MatchHandler {
         await this.updateMatch();
         for (const playerId of this.match.players) {
             await this.playerService.setPlayerMatch(playerId, null);
+        }
+        // Handle autojoin for registered players in random order
+        if (this.queueAutojoin.size > 0) {
+            console.log(`Processing autojoin for ${this.queueAutojoin.size} players`);
+            // Convert to array for random element removal
+            const autojoinPlayers = Array.from(this.queueAutojoin);
+            // Add players back to queue in random order by picking random elements
+            while (autojoinPlayers.length > 0) {
+                const randomIndex = Math.floor(Math.random() * autojoinPlayers.length);
+                const playerId = autojoinPlayers.splice(randomIndex, 1)[0];
+                try {
+                    await this.playerService.addPlayerToQueue(playerId, this.match.queueId);
+                    console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId}`);
+                }
+                catch (error) {
+                    console.error(`Failed to auto-rejoin player ${playerId} to queue:`, error);
+                }
+            }
         }
         try {
             if (this.channel) {

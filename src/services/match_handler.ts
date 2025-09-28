@@ -29,6 +29,7 @@ export class MatchHandler {
   private playerService: PlayerService;
   private readyTimeout: NodeJS.Timeout | null = null;
   private voteTimeout: NodeJS.Timeout | null = null;
+  private queueAutojoin: Set<string> = new Set();
 
   private static readonly READY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
   private static readonly VOTE_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
@@ -276,6 +277,14 @@ export class MatchHandler {
             .setLabel('Cancel Match')
             .setStyle(ButtonStyle.Danger)
         );
+    } else if (this.match.state === MatchState.COMPLETED || this.match.state === MatchState.CANCELLED) {
+      return new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId(`autojoin_queue_${this.match.id}`)
+            .setLabel('🔄 Auto-join Next Queue')
+            .setStyle(ButtonStyle.Secondary)
+        );
     }
 
     return null;
@@ -295,8 +304,49 @@ export class MatchHandler {
         await this.handleVote(interaction, 'team2');
       } else if (customId === `vote_cancel_${this.match.id}`) {
         await this.handleVote(interaction, 'cancel');
+      } else if (customId === `autojoin_queue_${this.match.id}`) {
+        await this.handleAutojoinRegistration(interaction);
       }
     });
+  }
+
+  private async handleAutojoinRegistration(interaction: ButtonInteraction): Promise<void> {
+    try {
+      const { user } = interaction;
+
+      // Check if user was in this match
+      if (!this.match.players.includes(user.id)) {
+        await interaction.reply({
+          content: 'You were not in this match!',
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
+      // Check if they're already registered for autojoin
+      if (this.queueAutojoin.has(user.id)) {
+        // Remove from autojoin
+        this.queueAutojoin.delete(user.id);
+        await interaction.reply({
+          content: '❌ Removed from auto-join list. You will not automatically rejoin the queue.',
+          flags: MessageFlags.Ephemeral
+        });
+      } else {
+        // Add to autojoin
+        this.queueAutojoin.add(user.id);
+        await interaction.reply({
+          content: '✅ Added to auto-join list! You will automatically rejoin the queue when this match closes.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
+    } catch (error) {
+      console.error('Error handling autojoin registration:', error);
+      await interaction.reply({
+        content: 'An error occurred while registering for auto-join.',
+        flags: MessageFlags.Ephemeral
+      });
+    }
   }
 
   private async startReadyPhase(): Promise<void> {
@@ -530,6 +580,27 @@ export class MatchHandler {
 
     for (const playerId of this.match.players) {
       await this.playerService.setPlayerMatch(playerId, null);
+    }
+
+    // Handle autojoin for registered players in random order
+    if (this.queueAutojoin.size > 0) {
+      console.log(`Processing autojoin for ${this.queueAutojoin.size} players`);
+
+      // Convert to array for random element removal
+      const autojoinPlayers = Array.from(this.queueAutojoin);
+
+      // Add players back to queue in random order by picking random elements
+      while (autojoinPlayers.length > 0) {
+        const randomIndex = Math.floor(Math.random() * autojoinPlayers.length);
+        const playerId = autojoinPlayers.splice(randomIndex, 1)[0];
+
+        try {
+          await this.playerService.addPlayerToQueue(playerId, this.match.queueId);
+          console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId}`);
+        } catch (error) {
+          console.error(`Failed to auto-rejoin player ${playerId} to queue:`, error);
+        }
+      }
     }
 
     try {
