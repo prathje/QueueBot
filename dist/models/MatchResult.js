@@ -8,6 +8,10 @@ const MatchResultSchema = new mongoose_1.Schema({
     gamemodeId: { type: String, required: true },
     winningTeam: { type: Number, enum: [1, 2], required: true },
     map: { type: String, required: true },
+    teams: {
+        team1: [{ type: String, required: true }],
+        team2: [{ type: String, required: true }]
+    },
     players: [{ type: String, required: true }],
     completedAt: { type: Date, default: Date.now }
 });

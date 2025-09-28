@@ -52,6 +52,10 @@ export interface IMatchResult {
   gamemodeId: string;
   winningTeam: 1 | 2;
   map: string;
+  teams: {
+    team1: string[];
+    team2: string[];
+  };
   players: string[];
   completedAt: Date;
 }

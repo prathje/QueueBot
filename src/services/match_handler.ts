@@ -431,6 +431,10 @@ export class MatchHandler {
       gamemodeId: this.match.gamemodeId,
       winningTeam,
       map: this.match.map,
+      teams: {
+        team1: this.match.teams.team1,
+        team2: this.match.teams.team2
+      },
       players: this.match.players,
       completedAt: new Date()
     });

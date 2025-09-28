@@ -259,12 +259,10 @@ class MatchHandler {
                 content: 'You are ready!',
                 flags: discord_js_1.MessageFlags.Ephemeral
             });
+            await this.updateMatchMessage();
+            await this.updateMatch();
             if (this.match.readyPlayers.length === this.match.players.length) {
                 await this.startMatch();
-            }
-            else {
-                await this.updateMatch();
-                await this.updateMatchMessage();
             }
         }
         catch (error) {
@@ -286,9 +284,9 @@ class MatchHandler {
         if (this.channel) {
             await this.channel.send({
                 content: '🎮 **Match started!** Good luck and have fun!',
-                embeds: [new discord_js_1.EmbedBuilder()
-                        .setDescription(`Voice channels have been created for your teams.`)
-                        .setColor(0x00FF00)]
+                embeds: [ /*new EmbedBuilder()
+                  .setDescription(`Voice channels have been created for your teams.`)
+                  .setColor(0x00FF00)*/]
             });
         }
         this.voteTimeout = setTimeout(async () => {
@@ -364,6 +362,10 @@ class MatchHandler {
             gamemodeId: this.match.gamemodeId,
             winningTeam,
             map: this.match.map,
+            teams: {
+                team1: this.match.teams.team1,
+                team2: this.match.teams.team2
+            },
             players: this.match.players,
             completedAt: new Date()
         });
