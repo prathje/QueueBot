@@ -48,7 +48,7 @@ class MatchmakingService {
     }
     createTeams(players, algorithm) {
         const shuffledPlayers = (0, utils_1.shuffled)(players);
-        const teamSize = Math.floor(players.length / 2);
+        const teamSize = Math.ceil(players.length / 2); // this was floor, but ceil makes sense for our test queue for a single player
         return {
             team1: shuffledPlayers.slice(0, teamSize),
             team2: shuffledPlayers.slice(teamSize, teamSize * 2)

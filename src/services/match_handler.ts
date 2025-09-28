@@ -31,15 +31,22 @@ export class MatchHandler {
   private readyTimeout: NodeJS.Timeout | null = null;
   private voteTimeout: NodeJS.Timeout | null = null;
   private queueAutojoin: Set<string> = new Set();
+  private onPlayerJoinQueue: ((playerId: string, queueId: string) => Promise<boolean>) | null = null;
 
   private static readonly READY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
   private static readonly VOTE_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
 
-  constructor(client: Client, guild: Guild, match: IMatch) {
+  constructor(
+    client: Client,
+    guild: Guild,
+    match: IMatch,
+    onPlayerJoinQueue?: (playerId: string, queueId: string) => Promise<boolean>
+  ) {
     this.client = client;
     this.guild = guild;
     this.match = match;
     this.playerService = PlayerService.getInstance();
+    this.onPlayerJoinQueue = onPlayerJoinQueue || null;
   }
 
   async initialize(): Promise<void> {
@@ -279,13 +286,16 @@ export class MatchHandler {
             .setStyle(ButtonStyle.Danger)
         );
     } else if (this.match.state === MatchState.COMPLETED || this.match.state === MatchState.CANCELLED) {
-      return new ActionRowBuilder<ButtonBuilder>()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId(`autojoin_queue_${this.match.id}`)
-            .setLabel('🔄 Auto-join Next Queue')
-            .setStyle(ButtonStyle.Secondary)
-        );
+
+      if (this.onPlayerJoinQueue) { // we only show autojoin if we have a callback to rejoin!
+        return new ActionRowBuilder<ButtonBuilder>()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId(`autojoin_queue_${this.match.id}`)
+              .setLabel('🔄 Auto-join Next Queue')
+              .setStyle(ButtonStyle.Secondary)
+          );
+      }
     }
 
     return null;
@@ -592,8 +602,15 @@ export class MatchHandler {
 
       for (const playerId of shuffledPlayers) {
         try {
-          await this.playerService.addPlayerToQueue(playerId, this.match.queueId);
-          console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId}`);
+          // Use queue callback to handle full join logic
+          if (this.onPlayerJoinQueue) {
+            const success = await this.onPlayerJoinQueue(playerId, this.match.queueId);
+            if (success) {
+              console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId}`);
+            } else {
+              console.log(`Failed to auto-rejoin player ${playerId} to queue ${this.match.queueId} (validation failed)`);
+            }
+          }
         } catch (error) {
           console.error(`Failed to auto-rejoin player ${playerId} to queue:`, error);
         }

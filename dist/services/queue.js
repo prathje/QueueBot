@@ -185,6 +185,31 @@ class Queue {
             });
         }
     }
+    async addPlayerToQueueProgrammatically(playerId) {
+        try {
+            // Check if player is already in a match
+            if (this.playerService.isPlayerInMatch(playerId)) {
+                console.log(`Player ${playerId} tried to auto-join queue but is in match`);
+                return false;
+            }
+            // Check if player is already in this queue
+            if (this.playerService.isPlayerInQueue(playerId, this.config.id)) {
+                console.log(`Player ${playerId} is already in queue ${this.config.id}`);
+                return false;
+            }
+            // Add player to queue
+            await this.playerService.addPlayerToQueue(playerId, this.config.id);
+            console.log(`Player ${playerId} programmatically joined queue ${this.config.id}`);
+            // Update queue display and check for matches
+            await this.updateQueueMessage();
+            await this.checkForMatch();
+            return true;
+        }
+        catch (error) {
+            console.error(`Error adding player ${playerId} to queue programmatically:`, error);
+            return false;
+        }
+    }
     async checkForMatch() {
         try {
             const queueData = {
@@ -195,7 +220,13 @@ class Queue {
             const match = await this.matchmakingService.processQueue(queueData);
             if (match) {
                 console.log(`Match created: ${match.id}`);
-                const matchHandler = new match_handler_1.MatchHandler(this.client, this.guild, match);
+                const matchHandler = new match_handler_1.MatchHandler(this.client, this.guild, match, async (playerId, queueId) => {
+                    // Callback to handle player joining queue (for autojoin)
+                    if (queueId === this.config.id) {
+                        return await this.addPlayerToQueueProgrammatically(playerId);
+                    }
+                    return false;
+                });
                 await matchHandler.initialize();
                 this.activeMatches.set(match.id, matchHandler);
                 await this.updateQueueMessage();

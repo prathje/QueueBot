@@ -8,7 +8,7 @@ const MatchResult_1 = require("../models/MatchResult");
 const players_1 = require("./players");
 const utils_1 = require("../utils");
 class MatchHandler {
-    constructor(client, guild, match) {
+    constructor(client, guild, match, onPlayerJoinQueue) {
         this.channel = null;
         this.voiceChannel1 = null;
         this.voiceChannel2 = null;
@@ -16,10 +16,12 @@ class MatchHandler {
         this.readyTimeout = null;
         this.voteTimeout = null;
         this.queueAutojoin = new Set();
+        this.onPlayerJoinQueue = null;
         this.client = client;
         this.guild = guild;
         this.match = match;
         this.playerService = players_1.PlayerService.getInstance();
+        this.onPlayerJoinQueue = onPlayerJoinQueue || null;
     }
     async initialize() {
         await this.saveMatch();
@@ -499,8 +501,21 @@ class MatchHandler {
             const shuffledPlayers = (0, utils_1.shuffled)(Array.from(this.queueAutojoin));
             for (const playerId of shuffledPlayers) {
                 try {
-                    await this.playerService.addPlayerToQueue(playerId, this.match.queueId);
-                    console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId}`);
+                    // Use queue callback to handle full join logic
+                    if (this.onPlayerJoinQueue) {
+                        const success = await this.onPlayerJoinQueue(playerId, this.match.queueId);
+                        if (success) {
+                            console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId}`);
+                        }
+                        else {
+                            console.log(`Failed to auto-rejoin player ${playerId} to queue ${this.match.queueId} (validation failed)`);
+                        }
+                    }
+                    else {
+                        // Fallback to direct PlayerService call if no callback
+                        await this.playerService.addPlayerToQueue(playerId, this.match.queueId);
+                        console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId} (fallback)`);
+                    }
                 }
                 catch (error) {
                     console.error(`Failed to auto-rejoin player ${playerId} to queue:`, error);
