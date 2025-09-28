@@ -66,6 +66,13 @@ class Gamemode {
     getCategory() {
         return this.category;
     }
+    async shutdown() {
+        console.log(`Shutting down gamemode: ${this.config.displayName}`);
+        for (const queue of this.queues.values()) {
+            await queue.shutdown();
+        }
+        console.log(`Gamemode ${this.config.displayName} shutdown complete`);
+    }
 }
 exports.Gamemode = Gamemode;
 //# sourceMappingURL=gamemode.js.map

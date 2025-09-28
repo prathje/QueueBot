@@ -135,7 +135,15 @@ class TeeWorldsLeagueBot {
     async shutdown() {
         try {
             console.log('Shutting down bot...');
+            // Shutdown all gamemodes and queues
+            console.log('Shutting down queues...');
+            for (const gamemode of this.gamemodes.values()) {
+                await gamemode.shutdown();
+            }
+            // Give a moment for the queue messages to be updated
+            await new Promise(resolve => setTimeout(resolve, 1000));
             this.client.destroy();
+            console.log('Bot shutdown complete');
             process.exit(0);
         }
         catch (error) {

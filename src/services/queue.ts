@@ -274,4 +274,46 @@ export class Queue {
   getChannel(): TextChannel | null {
     return this.channel;
   }
+
+  async shutdown(): Promise<void> {
+    try {
+      console.log(`Shutting down queue: ${this.config.displayName}`);
+
+      if (this.queueMessage) {
+        const shutdownEmbed = new EmbedBuilder()
+          .setTitle(`${this.config.displayName} Queue`)
+          .setDescription(`Map Pool: ${this.config.mapPool.join(', ')}`)
+          .addFields(
+            { name: 'Status', value: '💤 Queue is currently sleeping', inline: true },
+            { name: 'Info', value: 'Bot is restarting or shutting down', inline: true }
+          )
+          .setColor(0xFF6B6B)
+          .setTimestamp();
+
+        // Create disabled buttons
+        const disabledRow = new ActionRowBuilder<ButtonBuilder>()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId('disabled_join')
+              .setLabel('Join Queue')
+              .setStyle(ButtonStyle.Secondary)
+              .setDisabled(true),
+            new ButtonBuilder()
+              .setCustomId('disabled_leave')
+              .setLabel('Leave Queue')
+              .setStyle(ButtonStyle.Secondary)
+              .setDisabled(true)
+          );
+
+        await this.queueMessage.edit({
+          embeds: [shutdownEmbed],
+          components: [disabledRow]
+        });
+
+        console.log(`Queue ${this.config.displayName} marked as sleeping`);
+      }
+    } catch (error) {
+      console.error(`Error shutting down queue ${this.config.displayName}:`, error);
+    }
+  }
 }

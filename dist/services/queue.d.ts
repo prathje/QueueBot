@@ -30,6 +30,7 @@ export declare class Queue {
     getId(): string;
     getDisplayName(): string;
     getChannel(): TextChannel | null;
+    shutdown(): Promise<void>;
 }
 export {};
 //# sourceMappingURL=queue.d.ts.map

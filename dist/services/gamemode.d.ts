@@ -16,5 +16,6 @@ export declare class Gamemode {
     getId(): string;
     getDisplayName(): string;
     getCategory(): CategoryChannel | null;
+    shutdown(): Promise<void>;
 }
 //# sourceMappingURL=gamemode.d.ts.map

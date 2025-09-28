@@ -218,6 +218,38 @@ class Queue {
     getChannel() {
         return this.channel;
     }
+    async shutdown() {
+        try {
+            console.log(`Shutting down queue: ${this.config.displayName}`);
+            if (this.queueMessage) {
+                const shutdownEmbed = new discord_js_1.EmbedBuilder()
+                    .setTitle(`${this.config.displayName} Queue`)
+                    .setDescription(`Map Pool: ${this.config.mapPool.join(', ')}`)
+                    .addFields({ name: 'Status', value: '💤 Queue is currently sleeping', inline: true }, { name: 'Info', value: 'Bot is restarting or shutting down', inline: true })
+                    .setColor(0xFF6B6B)
+                    .setTimestamp();
+                // Create disabled buttons
+                const disabledRow = new discord_js_1.ActionRowBuilder()
+                    .addComponents(new discord_js_1.ButtonBuilder()
+                    .setCustomId('disabled_join')
+                    .setLabel('Join Queue')
+                    .setStyle(discord_js_1.ButtonStyle.Secondary)
+                    .setDisabled(true), new discord_js_1.ButtonBuilder()
+                    .setCustomId('disabled_leave')
+                    .setLabel('Leave Queue')
+                    .setStyle(discord_js_1.ButtonStyle.Secondary)
+                    .setDisabled(true));
+                await this.queueMessage.edit({
+                    embeds: [shutdownEmbed],
+                    components: [disabledRow]
+                });
+                console.log(`Queue ${this.config.displayName} marked as sleeping`);
+            }
+        }
+        catch (error) {
+            console.error(`Error shutting down queue ${this.config.displayName}:`, error);
+        }
+    }
 }
 exports.Queue = Queue;
 //# sourceMappingURL=queue.js.map
