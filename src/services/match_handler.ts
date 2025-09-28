@@ -188,11 +188,16 @@ export class MatchHandler {
     const row = this.createMatchButtons();
 
     try {
-      this.matchMessage = await this.channel.send({
+      const messageOptions: any = {
         content: `Match found! <@${this.match.players.join('> <@')}>`,
-        embeds: [embed],
-        components: [row]
-      });
+        embeds: [embed]
+      };
+
+      if (row) {
+        messageOptions.components = [row];
+      }
+
+      this.matchMessage = await this.channel.send(messageOptions);
     } catch (error) {
       console.error('Error setting up match message:', error);
     }
@@ -226,7 +231,7 @@ export class MatchHandler {
     return embed;
   }
 
-  private createMatchButtons(): ActionRowBuilder<ButtonBuilder> {
+  private createMatchButtons(): ActionRowBuilder<ButtonBuilder> | null {
     if (this.match.state === MatchState.READY_UP) {
       return new ActionRowBuilder<ButtonBuilder>()
         .addComponents(
@@ -253,7 +258,7 @@ export class MatchHandler {
         );
     }
 
-    return new ActionRowBuilder<ButtonBuilder>();
+    return null;
   }
 
   private setupInteractionHandlers(): void {
@@ -515,10 +520,17 @@ export class MatchHandler {
     const row = this.createMatchButtons();
 
     try {
-      await this.matchMessage.edit({
-        embeds: [embed],
-        components: [row]
-      });
+      const editOptions: any = {
+        embeds: [embed]
+      };
+
+      if (row) {
+        editOptions.components = [row];
+      } else {
+        editOptions.components = [];
+      }
+
+      await this.matchMessage.edit(editOptions);
     } catch (error) {
       console.error('Error updating match message:', error);
     }

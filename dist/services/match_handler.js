@@ -157,11 +157,14 @@ class MatchHandler {
         const embed = this.createMatchEmbed();
         const row = this.createMatchButtons();
         try {
-            this.matchMessage = await this.channel.send({
+            const messageOptions = {
                 content: `Match found! <@${this.match.players.join('> <@')}>`,
-                embeds: [embed],
-                components: [row]
-            });
+                embeds: [embed]
+            };
+            if (row) {
+                messageOptions.components = [row];
+            }
+            this.matchMessage = await this.channel.send(messageOptions);
         }
         catch (error) {
             console.error('Error setting up match message:', error);
@@ -205,7 +208,7 @@ class MatchHandler {
                 .setLabel('Cancel Match')
                 .setStyle(discord_js_1.ButtonStyle.Danger));
         }
-        return new discord_js_1.ActionRowBuilder();
+        return null;
     }
     setupInteractionHandlers() {
         this.client.on('interactionCreate', async (interaction) => {
@@ -438,10 +441,16 @@ class MatchHandler {
         const embed = this.createMatchEmbed();
         const row = this.createMatchButtons();
         try {
-            await this.matchMessage.edit({
-                embeds: [embed],
-                components: [row]
-            });
+            const editOptions = {
+                embeds: [embed]
+            };
+            if (row) {
+                editOptions.components = [row];
+            }
+            else {
+                editOptions.components = [];
+            }
+            await this.matchMessage.edit(editOptions);
         }
         catch (error) {
             console.error('Error updating match message:', error);
