@@ -17,6 +17,7 @@ import { IMatch, MatchState } from '../types';
 import { Match } from '../models/Match';
 import { MatchResult } from '../models/MatchResult';
 import { PlayerService } from './players';
+import { shuffled } from '../utils';
 
 export class MatchHandler {
   private client: Client;
@@ -586,14 +587,10 @@ export class MatchHandler {
     if (this.queueAutojoin.size > 0) {
       console.log(`Processing autojoin for ${this.queueAutojoin.size} players`);
 
-      // Convert to array for random element removal
-      const autojoinPlayers = Array.from(this.queueAutojoin);
+      // Add players back to queue in random order
+      const shuffledPlayers = shuffled(Array.from(this.queueAutojoin));
 
-      // Add players back to queue in random order by picking random elements
-      while (autojoinPlayers.length > 0) {
-        const randomIndex = Math.floor(Math.random() * autojoinPlayers.length);
-        const playerId = autojoinPlayers.splice(randomIndex, 1)[0];
-
+      for (const playerId of shuffledPlayers) {
         try {
           await this.playerService.addPlayerToQueue(playerId, this.match.queueId);
           console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId}`);

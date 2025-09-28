@@ -4,6 +4,7 @@ exports.MatchmakingService = void 0;
 const uuid_1 = require("uuid");
 const types_1 = require("../types");
 const players_1 = require("./players");
+const utils_1 = require("../utils");
 class MatchmakingService {
     constructor() {
         this.playerService = players_1.PlayerService.getInstance();
@@ -43,11 +44,10 @@ class MatchmakingService {
         return match;
     }
     selectPlayersForMatch(playersInQueue, playerCount) {
-        const shuffled = [...playersInQueue].sort(() => Math.random() - 0.5);
-        return shuffled.slice(0, playerCount);
+        return (0, utils_1.shuffled)(playersInQueue).slice(0, playerCount);
     }
     createTeams(players, algorithm) {
-        const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
+        const shuffledPlayers = (0, utils_1.shuffled)(players);
         const teamSize = Math.floor(players.length / 2);
         return {
             team1: shuffledPlayers.slice(0, teamSize),
@@ -55,8 +55,7 @@ class MatchmakingService {
         };
     }
     selectMap(mapPool) {
-        const randomIndex = Math.floor(Math.random() * mapPool.length);
-        return mapPool[randomIndex];
+        return (0, utils_1.randomElement)(mapPool);
     }
 }
 exports.MatchmakingService = MatchmakingService;

@@ -6,6 +6,7 @@ const types_1 = require("../types");
 const Match_1 = require("../models/Match");
 const MatchResult_1 = require("../models/MatchResult");
 const players_1 = require("./players");
+const utils_1 = require("../utils");
 class MatchHandler {
     constructor(client, guild, match) {
         this.channel = null;
@@ -494,12 +495,9 @@ class MatchHandler {
         // Handle autojoin for registered players in random order
         if (this.queueAutojoin.size > 0) {
             console.log(`Processing autojoin for ${this.queueAutojoin.size} players`);
-            // Convert to array for random element removal
-            const autojoinPlayers = Array.from(this.queueAutojoin);
-            // Add players back to queue in random order by picking random elements
-            while (autojoinPlayers.length > 0) {
-                const randomIndex = Math.floor(Math.random() * autojoinPlayers.length);
-                const playerId = autojoinPlayers.splice(randomIndex, 1)[0];
+            // Add players back to queue in random order
+            const shuffledPlayers = (0, utils_1.shuffled)(Array.from(this.queueAutojoin));
+            for (const playerId of shuffledPlayers) {
                 try {
                     await this.playerService.addPlayerToQueue(playerId, this.match.queueId);
                     console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId}`);

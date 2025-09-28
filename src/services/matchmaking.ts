@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { IMatch, IQueue, MatchState } from '../types';
 import { PlayerService } from './players';
+import { shuffled, randomElement } from '../utils';
 
 export class MatchmakingService {
   private playerService: PlayerService;
@@ -50,13 +51,12 @@ export class MatchmakingService {
   }
 
   private selectPlayersForMatch(playersInQueue: string[], playerCount: number): string[] {
-    const shuffled = [...playersInQueue].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, playerCount);
+    return shuffled(playersInQueue).slice(0, playerCount);
   }
 
   private createTeams(players: string[], algorithm: string): { team1: string[]; team2: string[] } {
-    const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
-    const teamSize = Math.floor(players.length / 2);
+    const shuffledPlayers = shuffled(players);
+    const teamSize = Math.ceil(players.length / 2); // this was floor, but ceil makes sense for our test queue for a single player
 
     return {
       team1: shuffledPlayers.slice(0, teamSize),
@@ -65,7 +65,6 @@ export class MatchmakingService {
   }
 
   private selectMap(mapPool: string[]): string {
-    const randomIndex = Math.floor(Math.random() * mapPool.length);
-    return mapPool[randomIndex];
+    return randomElement(mapPool);
   }
 }
