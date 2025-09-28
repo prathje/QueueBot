@@ -15,6 +15,7 @@ export declare class Queue {
     private matchmakingService;
     private activeMatches;
     private matchmakingMutex;
+    private interactionListener;
     constructor(client: Client, guild: Guild, category: CategoryChannel, config: QueueConfig, matchmakingMutex: Mutex);
     initialize(): Promise<void>;
     private ensureChannel;
@@ -24,6 +25,7 @@ export declare class Queue {
     private createQueueEmbed;
     private createQueueButtons;
     private setupInteractionHandlers;
+    private cleanupInteractionHandlers;
     private handleJoinQueue;
     private handleLeaveQueue;
     addPlayerToQueueProgrammatically(playerId: string): Promise<boolean>;

@@ -33,6 +33,7 @@ export class MatchHandler {
   private queueAutojoin: Set<string> = new Set();
   private onPlayerJoinQueue: ((playerId: string, queueId: string) => Promise<boolean>) | null = null;
   private onMatchClose: ((matchId: string) => void) | null = null;
+  private interactionListener: ((interaction: any) => Promise<void>) | null = null;
 
   private static readonly READY_TIMEOUT = 1 * 60 * 1000; // 1 minute
   private static readonly VOTE_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
@@ -305,10 +306,10 @@ export class MatchHandler {
   }
 
   private setupInteractionHandlers(): void {
-    this.client.on('interactionCreate', async (interaction) => {
+    this.interactionListener = async (interaction) => {
       if (!interaction.isButton()) return;
 
-      const { customId, user } = interaction;
+      const { customId } = interaction;
 
       if (customId === `ready_${this.match.id}`) {
         await this.handleReady(interaction);
@@ -321,7 +322,17 @@ export class MatchHandler {
       } else if (customId === `autojoin_queue_${this.match.id}`) {
         await this.handleAutojoinRegistration(interaction);
       }
-    });
+    };
+
+    this.client.on('interactionCreate', this.interactionListener);
+  }
+
+  private cleanupInteractionHandlers(): void {
+    if (this.interactionListener) {
+      this.client.removeListener('interactionCreate', this.interactionListener);
+      this.interactionListener = null;
+      console.log(`Cleaned up interaction listeners for match ${this.match.id}`);
+    }
   }
 
   private async handleAutojoinRegistration(interaction: ButtonInteraction): Promise<void> {
@@ -576,7 +587,7 @@ export class MatchHandler {
       await this.channel.send({
         content: `❌ **Match cancelled:** ${reason}`,
         embeds: [new EmbedBuilder()
-          .setDescription('You can now join queues again. The match will be closed in 10 seconds.')
+          .setDescription('You can join queues once this match closes. The match will be closed in 10 seconds.')
           .setColor(0xFF0000)]
       });
     }
@@ -592,32 +603,11 @@ export class MatchHandler {
     this.match.state = MatchState.CLOSED;
     await this.updateMatch();
 
+    // Clean up event listeners first
+    this.cleanupInteractionHandlers();
+
     for (const playerId of this.match.players) {
       await this.playerService.setPlayerMatch(playerId, null);
-    }
-
-    // Handle autojoin for registered players in random order
-    if (this.queueAutojoin.size > 0) {
-      console.log(`Processing autojoin for ${this.queueAutojoin.size} players`);
-
-      // Add players back to queue in random order
-      const shuffledPlayers = shuffled(Array.from(this.queueAutojoin));
-
-      for (const playerId of shuffledPlayers) {
-        try {
-          // Use queue callback to handle full join logic
-          if (this.onPlayerJoinQueue) {
-            const success = await this.onPlayerJoinQueue(playerId, this.match.queueId);
-            if (success) {
-              console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId}`);
-            } else {
-              console.log(`Failed to auto-rejoin player ${playerId} to queue ${this.match.queueId} (validation failed)`);
-            }
-          }
-        } catch (error) {
-          console.error(`Failed to auto-rejoin player ${playerId} to queue:`, error);
-        }
-      }
     }
 
     try {
@@ -645,6 +635,30 @@ export class MatchHandler {
       }
     } catch (error) {
       console.error('Error deleting match channels:', error);
+    }
+
+    // Handle autojoin for registered players in random order, we add them later so that the old channel is fully deleted first
+    if (this.queueAutojoin.size > 0) {
+      console.log(`Processing autojoin for ${this.queueAutojoin.size} players`);
+
+      // Add players back to queue in random order
+      const shuffledPlayers = shuffled(Array.from(this.queueAutojoin));
+
+      for (const playerId of shuffledPlayers) {
+        try {
+          // Use queue callback to handle full join logic
+          if (this.onPlayerJoinQueue) {
+            const success = await this.onPlayerJoinQueue(playerId, this.match.queueId);
+            if (success) {
+              console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId}`);
+            } else {
+              console.log(`Failed to auto-rejoin player ${playerId} to queue ${this.match.queueId} (validation failed)`);
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to auto-rejoin player ${playerId} to queue:`, error);
+        }
+      }
     }
   }
 
@@ -686,6 +700,9 @@ export class MatchHandler {
   async forceCancel(reason: string = 'Force cancelled by administrator'): Promise<void> {
     console.log(`Force cancelling match ${this.match.id}: ${reason}`);
 
+    // Clean up event listeners
+    this.cleanupInteractionHandlers();
+
     // Clear any timeouts
     if (this.readyTimeout) {
       clearTimeout(this.readyTimeout);
@@ -711,7 +728,7 @@ export class MatchHandler {
         await this.channel.send({
           content: `❌ **Match force cancelled:** ${reason}`,
           embeds: [{
-            description: 'This match was cancelled by an administrator. You can now join queues again.',
+            description: 'This match was cancelled by an administrator. You can join queues once this match closes.',
             color: 0xFF0000
           }]
         });
@@ -727,6 +744,8 @@ export class MatchHandler {
 
   async forceDelete(): Promise<void> {
     try {
+      // Clean up event listeners first
+      this.cleanupInteractionHandlers();
       if (this.channel) {
         await this.channel.delete();
         this.match.discordChannelId = null;

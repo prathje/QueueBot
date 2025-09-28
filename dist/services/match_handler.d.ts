@@ -14,6 +14,7 @@ export declare class MatchHandler {
     private queueAutojoin;
     private onPlayerJoinQueue;
     private onMatchClose;
+    private interactionListener;
     private static readonly READY_TIMEOUT;
     private static readonly VOTE_TIMEOUT;
     constructor(client: Client, guild: Guild, match: IMatch, onPlayerJoinQueue?: (playerId: string, queueId: string) => Promise<boolean>, onMatchClose?: (matchId: string) => void);
@@ -26,6 +27,7 @@ export declare class MatchHandler {
     private createMatchEmbed;
     private createMatchButtons;
     private setupInteractionHandlers;
+    private cleanupInteractionHandlers;
     private handleAutojoinRegistration;
     private startReadyPhase;
     private handleReady;

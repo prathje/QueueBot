@@ -10,6 +10,7 @@ class Queue {
         this.channel = null;
         this.queueMessage = null;
         this.activeMatches = new Map();
+        this.interactionListener = null;
         this.client = client;
         this.guild = guild;
         this.category = category;
@@ -113,17 +114,25 @@ class Queue {
             .setStyle(discord_js_1.ButtonStyle.Danger));
     }
     setupInteractionHandlers() {
-        this.client.on('interactionCreate', async (interaction) => {
+        this.interactionListener = async (interaction) => {
             if (!interaction.isButton())
                 return;
-            const { customId, user } = interaction;
+            const { customId } = interaction;
             if (customId === `join_queue_${this.config.id}`) {
                 await this.handleJoinQueue(interaction);
             }
             else if (customId === `leave_queue_${this.config.id}`) {
                 await this.handleLeaveQueue(interaction);
             }
-        });
+        };
+        this.client.on('interactionCreate', this.interactionListener);
+    }
+    cleanupInteractionHandlers() {
+        if (this.interactionListener) {
+            this.client.removeListener('interactionCreate', this.interactionListener);
+            this.interactionListener = null;
+            console.log(`Cleaned up interaction listeners for queue ${this.config.displayName}`);
+        }
     }
     async handleJoinQueue(interaction) {
         try {
@@ -262,6 +271,8 @@ class Queue {
     async shutdown() {
         try {
             console.log(`Shutting down queue: ${this.config.displayName}`);
+            // Clean up event listeners
+            this.cleanupInteractionHandlers();
             // Cancel all active matches in this queue
             await this.cancelActiveMatches();
             if (this.queueMessage) {

@@ -18,6 +18,7 @@ class MatchHandler {
         this.queueAutojoin = new Set();
         this.onPlayerJoinQueue = null;
         this.onMatchClose = null;
+        this.interactionListener = null;
         this.client = client;
         this.guild = guild;
         this.match = match;
@@ -239,10 +240,10 @@ class MatchHandler {
         return null;
     }
     setupInteractionHandlers() {
-        this.client.on('interactionCreate', async (interaction) => {
+        this.interactionListener = async (interaction) => {
             if (!interaction.isButton())
                 return;
-            const { customId, user } = interaction;
+            const { customId } = interaction;
             if (customId === `ready_${this.match.id}`) {
                 await this.handleReady(interaction);
             }
@@ -258,7 +259,15 @@ class MatchHandler {
             else if (customId === `autojoin_queue_${this.match.id}`) {
                 await this.handleAutojoinRegistration(interaction);
             }
-        });
+        };
+        this.client.on('interactionCreate', this.interactionListener);
+    }
+    cleanupInteractionHandlers() {
+        if (this.interactionListener) {
+            this.client.removeListener('interactionCreate', this.interactionListener);
+            this.interactionListener = null;
+            console.log(`Cleaned up interaction listeners for match ${this.match.id}`);
+        }
     }
     async handleAutojoinRegistration(interaction) {
         try {
@@ -495,6 +504,8 @@ class MatchHandler {
     async closeMatch() {
         this.match.state = types_1.MatchState.CLOSED;
         await this.updateMatch();
+        // Clean up event listeners first
+        this.cleanupInteractionHandlers();
         for (const playerId of this.match.players) {
             await this.playerService.setPlayerMatch(playerId, null);
         }
@@ -580,6 +591,8 @@ class MatchHandler {
     }
     async forceCancel(reason = 'Force cancelled by administrator') {
         console.log(`Force cancelling match ${this.match.id}: ${reason}`);
+        // Clean up event listeners
+        this.cleanupInteractionHandlers();
         // Clear any timeouts
         if (this.readyTimeout) {
             clearTimeout(this.readyTimeout);
@@ -617,6 +630,8 @@ class MatchHandler {
     }
     async forceDelete() {
         try {
+            // Clean up event listeners first
+            this.cleanupInteractionHandlers();
             if (this.channel) {
                 await this.channel.delete();
                 this.match.discordChannelId = null;

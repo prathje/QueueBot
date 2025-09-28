@@ -31,6 +31,7 @@ export class Queue {
   private matchmakingService: MatchmakingService;
   private activeMatches: Map<string, MatchHandler> = new Map();
   private matchmakingMutex: Mutex;
+  private interactionListener: ((interaction: any) => Promise<void>) | null = null;
 
   constructor(client: Client, guild: Guild, category: CategoryChannel, config: QueueConfig, matchmakingMutex: Mutex) {
     this.client = client;
@@ -156,17 +157,27 @@ export class Queue {
   }
 
   private setupInteractionHandlers(): void {
-    this.client.on('interactionCreate', async (interaction) => {
+    this.interactionListener = async (interaction) => {
       if (!interaction.isButton()) return;
 
-      const { customId, user } = interaction;
+      const { customId } = interaction;
 
       if (customId === `join_queue_${this.config.id}`) {
         await this.handleJoinQueue(interaction);
       } else if (customId === `leave_queue_${this.config.id}`) {
         await this.handleLeaveQueue(interaction);
       }
-    });
+    };
+
+    this.client.on('interactionCreate', this.interactionListener);
+  }
+
+  private cleanupInteractionHandlers(): void {
+    if (this.interactionListener) {
+      this.client.removeListener('interactionCreate', this.interactionListener);
+      this.interactionListener = null;
+      console.log(`Cleaned up interaction listeners for queue ${this.config.displayName}`);
+    }
   }
 
   private async handleJoinQueue(interaction: ButtonInteraction): Promise<void> {
@@ -333,6 +344,8 @@ export class Queue {
     try {
       console.log(`Shutting down queue: ${this.config.displayName}`);
 
+      // Clean up event listeners
+      this.cleanupInteractionHandlers();
 
       // Cancel all active matches in this queue
       await this.cancelActiveMatches();
