@@ -67,7 +67,7 @@ class TeeWorldsLeagueBot {
     const gamemodeConfigs: GamemodeConfig[] = [
       {
         id: 'gctf',
-        displayName: 'gCTF - Capture the Flag',
+        displayName: 'gCTF - Grenade Capture the Flag',
         queues: [
           {
             id: 'gctf_2v2',
@@ -86,21 +86,34 @@ class TeeWorldsLeagueBot {
         ]
       },
       {
+        id: 'ctf',
+        displayName: 'Vanilla CTF',
+        queues: [
+          {
+            id: 'ctf_2v2',
+            displayName: 'CTF 2v2',
+            mapPool: ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5'],
+            playerCount: 4,
+            matchmakingAlgorithm: 'random teams'
+          },
+          {
+            id: 'ctf_3v3',
+            displayName: 'CTF 3v3',
+            mapPool: ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5'],
+            playerCount: 6,
+            matchmakingAlgorithm: 'random teams'
+          }
+        ]
+      },
+      {
         id: 'dm',
-        displayName: 'Deathmatch',
+        displayName: 'Vanilla DM',
         queues: [
           {
             id: 'dm_1v1',
             displayName: 'DM 1v1',
-            mapPool: ['dm1', 'dm2', 'dm3', 'dm4', 'dm5'],
+            mapPool: ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5'],
             playerCount: 2,
-            matchmakingAlgorithm: 'random teams'
-          },
-          {
-            id: 'dm_ffa',
-            displayName: 'DM Free For All',
-            mapPool: ['dm1', 'dm2', 'dm3', 'dm4', 'dm5'],
-            playerCount: 4,
             matchmakingAlgorithm: 'random teams'
           }
         ]
@@ -112,7 +125,7 @@ class TeeWorldsLeagueBot {
           {
             id: 'test',
             displayName: 'Test',
-            mapPool: ['tets'],
+            mapPool: ['ctf_test'],
             playerCount: 1,
             matchmakingAlgorithm: 'random teams'
           }

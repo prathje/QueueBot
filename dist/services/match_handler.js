@@ -185,6 +185,19 @@ class MatchHandler {
             const cancelVotes = this.match.votes.cancel.length;
             embed.addFields({ name: 'Team 1', value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: 'Team 2', value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true }, { name: 'Votes', value: `Team 1: ${team1Votes}\nTeam 2: ${team2Votes}\nCancel: ${cancelVotes}`, inline: true });
         }
+        else if (this.match.state === types_1.MatchState.COMPLETED) {
+            const team1Votes = this.match.votes.team1.length;
+            const team2Votes = this.match.votes.team2.length;
+            const winningTeam = team1Votes > team2Votes ? 1 : 2;
+            embed
+                .setColor(0xFFD700)
+                .addFields({ name: 'Team 1', value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: 'Team 2', value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true }, { name: '🏆 Result', value: `**Team ${winningTeam} Wins!**\n\nFinal Votes:\nTeam 1: ${team1Votes}\nTeam 2: ${team2Votes}`, inline: true });
+        }
+        else if (this.match.state === types_1.MatchState.CANCELLED) {
+            embed
+                .setColor(0xFF0000)
+                .addFields({ name: 'Team 1', value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: 'Team 2', value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true }, { name: '❌ Status', value: '**Match Cancelled**\n\nVoting is no longer available.', inline: true });
+        }
         return embed;
     }
     createMatchButtons() {
@@ -303,16 +316,19 @@ class MatchHandler {
                 });
                 return;
             }
-            const hasVoted = this.match.votes.team1.includes(user.id) ||
-                this.match.votes.team2.includes(user.id) ||
-                this.match.votes.cancel.includes(user.id);
-            if (hasVoted) {
+            // Check if match is still accepting votes
+            if (this.match.state !== types_1.MatchState.IN_PROGRESS) {
                 await interaction.reply({
-                    content: 'You have already voted!',
+                    content: 'Voting is no longer available for this match!',
                     flags: discord_js_1.MessageFlags.Ephemeral
                 });
                 return;
             }
+            // Remove user's previous vote if they had one
+            this.match.votes.team1 = this.match.votes.team1.filter(id => id !== user.id);
+            this.match.votes.team2 = this.match.votes.team2.filter(id => id !== user.id);
+            this.match.votes.cancel = this.match.votes.cancel.filter(id => id !== user.id);
+            // Add new vote
             this.match.votes[voteType].push(user.id);
             const voteLabels = { team1: 'Team 1', team2: 'Team 2', cancel: 'Cancel' };
             await interaction.reply({
@@ -330,6 +346,10 @@ class MatchHandler {
         }
     }
     async checkVoteResults() {
+        // Only process votes if match is still in progress
+        if (this.match.state !== types_1.MatchState.IN_PROGRESS) {
+            return;
+        }
         const totalPlayers = this.match.players.length;
         const majority = Math.ceil(totalPlayers / 2);
         const team1Votes = this.match.votes.team1.length;
@@ -356,6 +376,7 @@ class MatchHandler {
         }
         this.match.state = types_1.MatchState.COMPLETED;
         await this.updateMatch();
+        await this.updateMatchMessage();
         const matchResult = new MatchResult_1.MatchResult({
             matchId: this.match.id,
             queueId: this.match.queueId,
@@ -399,6 +420,7 @@ class MatchHandler {
         }
         this.match.state = types_1.MatchState.CANCELLED;
         await this.updateMatch();
+        await this.updateMatchMessage();
         for (const playerId of this.match.players) {
             await this.playerService.setPlayerMatch(playerId, null);
         }
