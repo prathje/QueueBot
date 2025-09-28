@@ -157,15 +157,18 @@ export class Queue {
   }
 
   private setupInteractionHandlers(): void {
+
+    const m = new Mutex();
+
     this.interactionListener = async (interaction) => {
       if (!interaction.isButton()) return;
 
       const { customId } = interaction;
 
       if (customId === `join_queue_${this.config.id}`) {
-        await this.handleJoinQueue(interaction);
+        await m.runExclusive(() => this.handleJoinQueue(interaction));
       } else if (customId === `leave_queue_${this.config.id}`) {
-        await this.handleLeaveQueue(interaction);
+        await m.runExclusive(() => this.handleLeaveQueue(interaction));
       }
     };
 
@@ -280,8 +283,7 @@ export class Queue {
   }
 
   async checkForMatch(): Promise<void> {
-    await this.matchmakingMutex.acquire();
-    try {
+    await this.matchmakingMutex.runExclusive(async () => {
       const queueData: IQueue = {
         ...this.config,
         players: this.playerService.getPlayersInQueue(this.config.id),
@@ -313,11 +315,9 @@ export class Queue {
 
         await this.updateQueueMessage();
       }
-    } catch (error) {
+    }).catch(error => {
       console.error('Error checking for match:', error);
-    } finally {
-      this.matchmakingMutex.release();
-    }
+    });
   }
 
   getActiveMatches(): MatchHandler[] {

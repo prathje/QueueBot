@@ -17,4 +17,13 @@ export class Mutex {
         this.resolveCurrent?.();
         this.resolveCurrent = null;
     }
+
+    public async runExclusive<T>(callback: () => Promise<T>): Promise<T> {
+        await this.acquire();
+        try {
+            return await callback();
+        } finally {
+            this.release();
+        }
+    }
 }

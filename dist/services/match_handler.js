@@ -7,6 +7,7 @@ const Match_1 = require("../models/Match");
 const MatchResult_1 = require("../models/MatchResult");
 const players_1 = require("./players");
 const utils_1 = require("../utils");
+const mutex_1 = require("../utils/mutex");
 class MatchHandler {
     constructor(client, guild, match, onPlayerJoinQueue, onMatchClose) {
         this.channel = null;
@@ -240,24 +241,25 @@ class MatchHandler {
         return null;
     }
     setupInteractionHandlers() {
+        const m = new mutex_1.Mutex();
         this.interactionListener = async (interaction) => {
             if (!interaction.isButton())
                 return;
             const { customId } = interaction;
             if (customId === `ready_${this.match.id}`) {
-                await this.handleReady(interaction);
+                await m.runExclusive(() => this.handleReady(interaction));
             }
             else if (customId === `vote_team1_${this.match.id}`) {
-                await this.handleVote(interaction, 'team1');
+                await m.runExclusive(() => this.handleVote(interaction, 'team1'));
             }
             else if (customId === `vote_team2_${this.match.id}`) {
-                await this.handleVote(interaction, 'team2');
+                await m.runExclusive(() => this.handleVote(interaction, 'team2'));
             }
             else if (customId === `vote_cancel_${this.match.id}`) {
-                await this.handleVote(interaction, 'cancel');
+                await m.runExclusive(() => this.handleVote(interaction, 'cancel'));
             }
             else if (customId === `autojoin_queue_${this.match.id}`) {
-                await this.handleAutojoinRegistration(interaction);
+                await m.runExclusive(() => this.handleAutojoinRegistration(interaction));
             }
         };
         this.client.on('interactionCreate', this.interactionListener);
@@ -492,7 +494,7 @@ class MatchHandler {
             await this.channel.send({
                 content: `❌ **Match cancelled:** ${reason}`,
                 embeds: [new discord_js_1.EmbedBuilder()
-                        .setDescription('You can now join queues again. The match will be closed in 10 seconds.')
+                        .setDescription('You can join queues once this match closes. The match will be closed in 10 seconds.')
                         .setColor(0xFF0000)]
             });
         }
@@ -508,29 +510,6 @@ class MatchHandler {
         this.cleanupInteractionHandlers();
         for (const playerId of this.match.players) {
             await this.playerService.setPlayerMatch(playerId, null);
-        }
-        // Handle autojoin for registered players in random order
-        if (this.queueAutojoin.size > 0) {
-            console.log(`Processing autojoin for ${this.queueAutojoin.size} players`);
-            // Add players back to queue in random order
-            const shuffledPlayers = (0, utils_1.shuffled)(Array.from(this.queueAutojoin));
-            for (const playerId of shuffledPlayers) {
-                try {
-                    // Use queue callback to handle full join logic
-                    if (this.onPlayerJoinQueue) {
-                        const success = await this.onPlayerJoinQueue(playerId, this.match.queueId);
-                        if (success) {
-                            console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId}`);
-                        }
-                        else {
-                            console.log(`Failed to auto-rejoin player ${playerId} to queue ${this.match.queueId} (validation failed)`);
-                        }
-                    }
-                }
-                catch (error) {
-                    console.error(`Failed to auto-rejoin player ${playerId} to queue:`, error);
-                }
-            }
         }
         try {
             if (this.channel) {
@@ -557,6 +536,29 @@ class MatchHandler {
         }
         catch (error) {
             console.error('Error deleting match channels:', error);
+        }
+        // Handle autojoin for registered players in random order, we add them later so that the old channel is fully deleted first
+        if (this.queueAutojoin.size > 0) {
+            console.log(`Processing autojoin for ${this.queueAutojoin.size} players`);
+            // Add players back to queue in random order
+            const shuffledPlayers = (0, utils_1.shuffled)(Array.from(this.queueAutojoin));
+            for (const playerId of shuffledPlayers) {
+                try {
+                    // Use queue callback to handle full join logic
+                    if (this.onPlayerJoinQueue) {
+                        const success = await this.onPlayerJoinQueue(playerId, this.match.queueId);
+                        if (success) {
+                            console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId}`);
+                        }
+                        else {
+                            console.log(`Failed to auto-rejoin player ${playerId} to queue ${this.match.queueId} (validation failed)`);
+                        }
+                    }
+                }
+                catch (error) {
+                    console.error(`Failed to auto-rejoin player ${playerId} to queue:`, error);
+                }
+            }
         }
     }
     async updateMatchMessage() {
@@ -615,7 +617,7 @@ class MatchHandler {
                 await this.channel.send({
                     content: `❌ **Match force cancelled:** ${reason}`,
                     embeds: [{
-                            description: 'This match was cancelled by an administrator. You can now join queues again.',
+                            description: 'This match was cancelled by an administrator. You can join queues once this match closes.',
                             color: 0xFF0000
                         }]
                 });

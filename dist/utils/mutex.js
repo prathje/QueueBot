@@ -19,6 +19,15 @@ class Mutex {
         this.resolveCurrent?.();
         this.resolveCurrent = null;
     }
+    async runExclusive(callback) {
+        await this.acquire();
+        try {
+            return await callback();
+        }
+        finally {
+            this.release();
+        }
+    }
 }
 exports.Mutex = Mutex;
 //# sourceMappingURL=mutex.js.map

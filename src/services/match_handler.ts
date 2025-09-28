@@ -18,6 +18,7 @@ import { Match } from '../models/Match';
 import { MatchResult } from '../models/MatchResult';
 import { PlayerService } from './players';
 import { shuffled } from '../utils';
+import { Mutex } from '../utils/mutex';
 
 export class MatchHandler {
   private client: Client;
@@ -306,21 +307,24 @@ export class MatchHandler {
   }
 
   private setupInteractionHandlers(): void {
+
+    const m = new Mutex();
+
     this.interactionListener = async (interaction) => {
       if (!interaction.isButton()) return;
 
       const { customId } = interaction;
 
       if (customId === `ready_${this.match.id}`) {
-        await this.handleReady(interaction);
+        await m.runExclusive(() => this.handleReady(interaction));
       } else if (customId === `vote_team1_${this.match.id}`) {
-        await this.handleVote(interaction, 'team1');
+        await m.runExclusive(() => this.handleVote(interaction, 'team1'));
       } else if (customId === `vote_team2_${this.match.id}`) {
-        await this.handleVote(interaction, 'team2');
+        await m.runExclusive(() => this.handleVote(interaction, 'team2'));
       } else if (customId === `vote_cancel_${this.match.id}`) {
-        await this.handleVote(interaction, 'cancel');
+        await m.runExclusive(() => this.handleVote(interaction, 'cancel'));
       } else if (customId === `autojoin_queue_${this.match.id}`) {
-        await this.handleAutojoinRegistration(interaction);
+        await m.runExclusive(() => this.handleAutojoinRegistration(interaction));
       }
     };
 
@@ -401,6 +405,7 @@ export class MatchHandler {
           content: 'You are already ready!',
           flags: MessageFlags.Ephemeral
         });
+        await this.updateMatchMessage();
         return;
       }
 
@@ -422,6 +427,7 @@ export class MatchHandler {
         content: 'An error occurred while readying up.',
         flags: MessageFlags.Ephemeral
       });
+      await this.updateMatchMessage();
     }
   }
 
@@ -467,6 +473,7 @@ export class MatchHandler {
           content: 'Voting is no longer available for this match!',
           flags: MessageFlags.Ephemeral
         });
+        await this.updateMatchMessage();
         return;
       }
 
@@ -498,6 +505,7 @@ export class MatchHandler {
   private async checkVoteResults(): Promise<void> {
     // Only process votes if match is still in progress
     if (this.match.state !== MatchState.IN_PROGRESS) {
+      await this.updateMatchMessage();
       return;
     }
 
@@ -798,8 +806,8 @@ export class MatchHandler {
           .setTimestamp();
 
         await user.send({
-          content: `**Match Found:** ${channelLink}\n\nGood luck and have fun! 🎯`,
-          embeds: [embed]
+          content: `**Match Found:** ${channelLink}`,
+          embeds: [/*embed*/]
         });
 
         console.log(`Sent match notification to ${user.username} (${playerId})`);

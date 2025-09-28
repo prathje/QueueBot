@@ -5,6 +5,7 @@ const discord_js_1 = require("discord.js");
 const players_1 = require("./players");
 const matchmaking_1 = require("./matchmaking");
 const match_handler_1 = require("./match_handler");
+const mutex_1 = require("../utils/mutex");
 class Queue {
     constructor(client, guild, category, config, matchmakingMutex) {
         this.channel = null;
@@ -114,15 +115,16 @@ class Queue {
             .setStyle(discord_js_1.ButtonStyle.Danger));
     }
     setupInteractionHandlers() {
+        const m = new mutex_1.Mutex();
         this.interactionListener = async (interaction) => {
             if (!interaction.isButton())
                 return;
             const { customId } = interaction;
             if (customId === `join_queue_${this.config.id}`) {
-                await this.handleJoinQueue(interaction);
+                await m.runExclusive(() => this.handleJoinQueue(interaction));
             }
             else if (customId === `leave_queue_${this.config.id}`) {
-                await this.handleLeaveQueue(interaction);
+                await m.runExclusive(() => this.handleLeaveQueue(interaction));
             }
         };
         this.client.on('interactionCreate', this.interactionListener);
@@ -221,8 +223,7 @@ class Queue {
         }
     }
     async checkForMatch() {
-        await this.matchmakingMutex.acquire();
-        try {
+        await this.matchmakingMutex.runExclusive(async () => {
             const queueData = {
                 ...this.config,
                 players: this.playerService.getPlayersInQueue(this.config.id),
@@ -245,13 +246,9 @@ class Queue {
                 this.activeMatches.set(match.id, matchHandler);
                 await this.updateQueueMessage();
             }
-        }
-        catch (error) {
+        }).catch(error => {
             console.error('Error checking for match:', error);
-        }
-        finally {
-            this.matchmakingMutex.release();
-        }
+        });
     }
     getActiveMatches() {
         return Array.from(this.activeMatches.values());
