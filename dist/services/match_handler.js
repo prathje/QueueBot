@@ -395,7 +395,7 @@ class MatchHandler {
         this.match.state = types_1.MatchState.CANCELLED;
         await this.updateMatch();
         for (const playerId of this.match.players) {
-            await this.playerService.setPlayerMatch(playerId, undefined);
+            await this.playerService.setPlayerMatch(playerId, null);
         }
         if (this.channel) {
             await this.channel.send({
@@ -414,7 +414,7 @@ class MatchHandler {
         this.match.state = types_1.MatchState.CLOSED;
         await this.updateMatch();
         for (const playerId of this.match.players) {
-            await this.playerService.setPlayerMatch(playerId, undefined);
+            await this.playerService.setPlayerMatch(playerId, null);
         }
         try {
             if (this.channel) {
@@ -472,7 +472,7 @@ class MatchHandler {
         await this.updateMatch();
         // Free players
         for (const playerId of this.match.players) {
-            await this.playerService.setPlayerMatch(playerId, undefined);
+            await this.playerService.setPlayerMatch(playerId, null);
         }
         // Send notification if channel exists
         if (this.channel) {

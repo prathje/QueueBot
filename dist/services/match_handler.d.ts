@@ -40,9 +40,9 @@ export declare class MatchHandler {
     private notifyPlayersOfMatchChannel;
     static cleanupMatchChannels(guild: Guild, match: {
         matchId: string;
-        discordChannelId?: string;
-        discordVoiceChannel1Id?: string;
-        discordVoiceChannel2Id?: string;
+        discordChannelId: string | null;
+        discordVoiceChannel1Id: string | null;
+        discordVoiceChannel2Id: string | null;
     }): Promise<number>;
 }
 //# sourceMappingURL=match_handler.d.ts.map

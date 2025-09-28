@@ -28,6 +28,9 @@ export class MatchmakingService {
       teams,
       map,
       state: MatchState.INITIAL,
+      discordChannelId: null,
+      discordVoiceChannel1Id: null,
+      discordVoiceChannel2Id: null,
       readyPlayers: [],
       votes: {
         team1: [],

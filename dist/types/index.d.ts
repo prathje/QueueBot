@@ -2,7 +2,7 @@ export interface IPlayer {
     discordId: string;
     username: string;
     currentQueues: string[];
-    currentMatch?: string;
+    currentMatch: string | null;
 }
 export interface IGamemode {
     id: string;
@@ -30,9 +30,9 @@ export interface IMatch {
     };
     map: string;
     state: MatchState;
-    discordChannelId?: string;
-    discordVoiceChannel1Id?: string;
-    discordVoiceChannel2Id?: string;
+    discordChannelId: string | null;
+    discordVoiceChannel1Id: string | null;
+    discordVoiceChannel2Id: string | null;
     readyPlayers: string[];
     votes: {
         team1: string[];

@@ -465,7 +465,7 @@ export class MatchHandler {
     await this.updateMatch();
 
     for (const playerId of this.match.players) {
-      await this.playerService.setPlayerMatch(playerId, undefined);
+      await this.playerService.setPlayerMatch(playerId, null);
     }
 
     if (this.channel) {
@@ -489,7 +489,7 @@ export class MatchHandler {
     await this.updateMatch();
 
     for (const playerId of this.match.players) {
-      await this.playerService.setPlayerMatch(playerId, undefined);
+      await this.playerService.setPlayerMatch(playerId, null);
     }
 
     try {
@@ -555,7 +555,7 @@ export class MatchHandler {
 
     // Free players
     for (const playerId of this.match.players) {
-      await this.playerService.setPlayerMatch(playerId, undefined);
+      await this.playerService.setPlayerMatch(playerId, null);
     }
 
     // Send notification if channel exists
@@ -630,7 +630,7 @@ export class MatchHandler {
     }
   }
 
-  static async cleanupMatchChannels(guild: Guild, match: { matchId: string; discordChannelId?: string; discordVoiceChannel1Id?: string; discordVoiceChannel2Id?: string }): Promise<number> {
+  static async cleanupMatchChannels(guild: Guild, match: { matchId: string; discordChannelId: string | null; discordVoiceChannel1Id: string | null; discordVoiceChannel2Id: string | null }): Promise<number> {
     let deletedChannels = 0;
 
     try {

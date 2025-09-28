@@ -6,7 +6,7 @@ const PlayerSchema = new mongoose_1.Schema({
     discordId: { type: String, required: true, unique: true },
     username: { type: String, required: true },
     currentQueues: [{ type: String, default: [] }],
-    currentMatch: { type: String, required: false }
+    currentMatch: { type: String, required: false, default: null }
 }, {
     timestamps: true
 });

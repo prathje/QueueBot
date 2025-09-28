@@ -20,9 +20,9 @@ const MatchSchema = new Schema<IMatchDocument>({
     enum: Object.values(MatchState),
     default: MatchState.INITIAL
   },
-  discordChannelId: { type: String, required: false },
-  discordVoiceChannel1Id: { type: String, required: false },
-  discordVoiceChannel2Id: { type: String, required: false },
+  discordChannelId: { type: String, required: false, default: null },
+  discordVoiceChannel1Id: { type: String, required: false, default: null },
+  discordVoiceChannel2Id: { type: String, required: false, default: null },
   readyPlayers: [{ type: String, default: [] }],
   votes: {
     team1: [{ type: String, default: [] }],

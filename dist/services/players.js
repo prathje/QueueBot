@@ -22,7 +22,7 @@ class PlayerService {
                         discordId: dbPlayer.discordId,
                         username: dbPlayer.username,
                         currentQueues: dbPlayer.currentQueues || [],
-                        currentMatch: dbPlayer.currentMatch || undefined
+                        currentMatch: dbPlayer.currentMatch || null
                     };
                 }
                 else {
@@ -30,14 +30,14 @@ class PlayerService {
                         discordId,
                         username,
                         currentQueues: [],
-                        currentMatch: undefined
+                        currentMatch: null
                     });
                     await newPlayer.save();
                     player = {
                         discordId,
                         username,
                         currentQueues: [],
-                        currentMatch: undefined
+                        currentMatch: null
                     };
                 }
                 this.players.set(discordId, player);
@@ -144,7 +144,7 @@ class PlayerService {
             const result = await Player_1.Player.updateMany({}, {
                 $set: {
                     currentQueues: [],
-                    currentMatch: undefined
+                    currentMatch: null
                 }
             });
             console.log(`Reset ${result.modifiedCount} player states and cleared cache`);

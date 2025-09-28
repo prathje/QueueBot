@@ -25,21 +25,21 @@ export class PlayerService {
             discordId: dbPlayer.discordId,
             username: dbPlayer.username,
             currentQueues: dbPlayer.currentQueues || [],
-            currentMatch: dbPlayer.currentMatch || undefined
+            currentMatch: dbPlayer.currentMatch || null
           };
         } else {
           const newPlayer = new Player({
             discordId,
             username,
             currentQueues: [],
-            currentMatch: undefined
+            currentMatch: null
           });
           await newPlayer.save();
           player = {
             discordId,
             username,
             currentQueues: [],
-            currentMatch: undefined
+            currentMatch: null
           };
         }
         this.players.set(discordId, player);
@@ -125,7 +125,7 @@ export class PlayerService {
     await this.updatePlayer(player);
   }
 
-  async setPlayerMatch(discordId: string, matchId: string | undefined): Promise<void> {
+  async setPlayerMatch(discordId: string, matchId: string | null): Promise<void> {
     const player = await this.getPlayer(discordId);
     if (!player) {
       throw new Error('Player not found');
@@ -168,7 +168,7 @@ export class PlayerService {
         {
           $set: {
             currentQueues: [],
-            currentMatch: undefined
+            currentMatch: null
           }
         }
       );

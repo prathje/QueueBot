@@ -24,6 +24,9 @@ class MatchmakingService {
             teams,
             map,
             state: types_1.MatchState.INITIAL,
+            discordChannelId: null,
+            discordVoiceChannel1Id: null,
+            discordVoiceChannel2Id: null,
             readyPlayers: [],
             votes: {
                 team1: [],
