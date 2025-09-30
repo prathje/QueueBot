@@ -14,6 +14,7 @@ export declare class Gamemode {
     private ensureCategory;
     private initializeQueues;
     getQueue(queueId: string): Queue | undefined;
+    getQueueByChannelId(channelId: string): Queue | undefined;
     getAllQueues(): Queue[];
     getId(): string;
     getDisplayName(): string;

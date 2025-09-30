@@ -16,6 +16,7 @@ export declare class Queue {
     private activeMatches;
     private matchmakingMutex;
     private interactionListener;
+    private disabled;
     constructor(client: Client, guild: Guild, category: CategoryChannel, config: QueueConfig, matchmakingMutex: Mutex);
     initialize(): Promise<void>;
     private ensureChannel;
@@ -36,6 +37,9 @@ export declare class Queue {
     getId(): string;
     getDisplayName(): string;
     getChannel(): TextChannel | null;
+    disable(): Promise<void>;
+    enable(): Promise<void>;
+    isDisabled(): boolean;
     shutdown(): Promise<void>;
     private cancelActiveMatches;
 }

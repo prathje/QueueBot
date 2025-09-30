@@ -786,6 +786,6 @@ class MatchHandler {
     }
 }
 exports.MatchHandler = MatchHandler;
-MatchHandler.READY_TIMEOUT = 1 * 60 * 1000; // 1 minute
+MatchHandler.READY_TIMEOUT = 1 * 60 * 1000; // 1 minute (there is no penalty for being slow to ready up rn)
 MatchHandler.VOTE_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
 //# sourceMappingURL=match_handler.js.map

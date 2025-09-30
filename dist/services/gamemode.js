@@ -55,6 +55,14 @@ class Gamemode {
     getQueue(queueId) {
         return this.queues.get(queueId);
     }
+    getQueueByChannelId(channelId) {
+        for (const queue of this.queues.values()) {
+            if (queue.getChannel()?.id === channelId) {
+                return queue;
+            }
+        }
+        return undefined;
+    }
     getAllQueues() {
         return Array.from(this.queues.values());
     }

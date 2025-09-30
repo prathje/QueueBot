@@ -20,6 +20,7 @@ export interface IQueue {
   matchmakingAlgorithm: string;
   discordChannelId?: string;
   players: string[];
+  disabled?: boolean;
 }
 
 export interface IMatch {

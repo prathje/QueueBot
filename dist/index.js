@@ -6,6 +6,7 @@ const database_1 = require("./config/database");
 const gamemode_1 = require("./services/gamemode");
 const startup_reset_1 = require("./services/startup_reset");
 const mutex_1 = require("./utils/mutex");
+const deploy_1 = require("./commands/deploy");
 class TeeWorldsLeagueBot {
     constructor() {
         this.guild = null;
@@ -26,6 +27,11 @@ class TeeWorldsLeagueBot {
             console.log(`Bot logged in as ${client.user.tag}!`);
             await this.initializeBot();
         });
+        this.client.on('interactionCreate', async (interaction) => {
+            if (!interaction.isChatInputCommand())
+                return;
+            await this.handleSlashCommand(interaction);
+        });
         this.client.on('error', (error) => {
             console.error('Discord client error:', error);
         });
@@ -45,6 +51,11 @@ class TeeWorldsLeagueBot {
                 throw new Error(`Guild with ID ${environment_1.config.discord.guildId} not found`);
             }
             console.log(`Connected to guild: ${this.guild.name}`);
+            // Deploy slash commands using the client's application ID
+            if (!this.client.application?.id) {
+                throw new Error('Could not get application ID from client');
+            }
+            await (0, deploy_1.deployCommands)(this.client.application.id);
             // Reset all matches and players on startup
             await startup_reset_1.StartupResetService.performStartupReset(this.guild);
             await this.initializeGamemodes();
@@ -135,6 +146,50 @@ class TeeWorldsLeagueBot {
             }
         }
         console.log('All gamemodes initialized successfully!');
+    }
+    async handleSlashCommand(interaction) {
+        try {
+            const { commandName, channelId } = interaction;
+            if (commandName === 'queue_disable' || commandName === 'queue_enable') {
+                // Find the queue that matches this channel
+                let targetQueue = null;
+                for (const gamemode of this.gamemodes.values()) {
+                    const queue = gamemode.getQueueByChannelId(channelId);
+                    if (queue) {
+                        targetQueue = queue;
+                        break;
+                    }
+                }
+                if (!targetQueue) {
+                    await interaction.reply({
+                        content: 'This command can only be used in a queue channel.',
+                        ephemeral: true
+                    });
+                    return;
+                }
+                if (commandName === 'queue_disable') {
+                    await targetQueue.disable();
+                    await interaction.reply({
+                        content: `Queue **${targetQueue.getDisplayName()}** has been disabled. All players have been removed.`,
+                        ephemeral: true
+                    });
+                }
+                else {
+                    await targetQueue.enable();
+                    await interaction.reply({
+                        content: `Queue **${targetQueue.getDisplayName()}** has been enabled.`,
+                        ephemeral: true
+                    });
+                }
+            }
+        }
+        catch (error) {
+            console.error('Error handling slash command:', error);
+            await interaction.reply({
+                content: 'An error occurred while executing the command.',
+                ephemeral: true
+            });
+        }
     }
     async start() {
         try {

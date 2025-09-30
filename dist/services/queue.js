@@ -13,6 +13,7 @@ class Queue {
         this.queueMessage = null;
         this.activeMatches = new Map();
         this.interactionListener = null;
+        this.disabled = false;
         this.client = client;
         this.guild = guild;
         this.category = category;
@@ -100,22 +101,35 @@ class Queue {
     }
     createQueueEmbed() {
         const playersInQueue = this.playerService.getPlayersInQueue(this.config.id);
-        return new discord_js_1.EmbedBuilder()
+        const embed = new discord_js_1.EmbedBuilder()
             .setTitle(`${this.config.displayName} Queue`)
             .setDescription(`Map Pool: ${this.config.mapPool.join(', ')}`)
-            .addFields({ name: 'Players in Queue', value: `${playersInQueue.length}/${this.config.playerCount}`, inline: true }, { name: 'Algorithm', value: this.config.matchmakingAlgorithm, inline: true })
-            .setColor(0x00AE86)
             .setTimestamp();
+        if (this.disabled) {
+            embed
+                .addFields({ name: 'Status', value: '🚫 **Queue Disabled**', inline: true }, { name: 'Algorithm', value: this.config.matchmakingAlgorithm, inline: true })
+                .setColor(0xFF6B6B); // Red color for disabled
+        }
+        else {
+            embed
+                .addFields({ name: 'Players in Queue', value: `${playersInQueue.length}/${this.config.playerCount}`, inline: true }, { name: 'Algorithm', value: this.config.matchmakingAlgorithm, inline: true })
+                .setColor(0x00AE86); // Green color for enabled
+        }
+        return embed;
     }
     createQueueButtons() {
-        return new discord_js_1.ActionRowBuilder()
-            .addComponents(new discord_js_1.ButtonBuilder()
+        const joinButton = new discord_js_1.ButtonBuilder()
             .setCustomId(`join_queue_${this.config.id}`)
             .setLabel('Join Queue')
-            .setStyle(discord_js_1.ButtonStyle.Success), new discord_js_1.ButtonBuilder()
+            .setStyle(discord_js_1.ButtonStyle.Success)
+            .setDisabled(this.disabled);
+        const leaveButton = new discord_js_1.ButtonBuilder()
             .setCustomId(`leave_queue_${this.config.id}`)
             .setLabel('Leave Queue')
-            .setStyle(discord_js_1.ButtonStyle.Danger));
+            .setStyle(discord_js_1.ButtonStyle.Danger)
+            .setDisabled(this.disabled);
+        return new discord_js_1.ActionRowBuilder()
+            .addComponents(joinButton, leaveButton);
     }
     setupInteractionHandlers() {
         const m = new mutex_1.Mutex();
@@ -142,6 +156,13 @@ class Queue {
     async handleJoinQueue(interaction) {
         try {
             const { user } = interaction;
+            if (this.disabled) {
+                await interaction.reply({
+                    content: 'This queue is currently disabled.',
+                    flags: discord_js_1.MessageFlags.Ephemeral
+                });
+                return;
+            }
             const player = await this.playerService.getOrCreatePlayer(user.id, user.username);
             if (this.playerService.isPlayerInMatch(user.id)) {
                 const player = await this.playerService.getPlayer(user.id);
@@ -247,11 +268,16 @@ class Queue {
         return { successful, failed };
     }
     async checkForMatch() {
+        // Don't process matches if the queue is disabled
+        if (this.disabled) {
+            return;
+        }
         await this.matchmakingMutex.runExclusive(async () => {
             const queueData = {
                 ...this.config,
                 players: this.playerService.getPlayersInQueue(this.config.id),
-                discordChannelId: this.channel?.id
+                discordChannelId: this.channel?.id,
+                disabled: this.disabled
             };
             const match = await this.matchmakingService.processQueue(queueData);
             if (match) {
@@ -291,6 +317,28 @@ class Queue {
     }
     getChannel() {
         return this.channel;
+    }
+    async disable() {
+        console.log(`Disabling queue: ${this.config.displayName}`);
+        this.disabled = true;
+        // Remove all players from the queue
+        const playersInQueue = this.playerService.getPlayersInQueue(this.config.id);
+        for (const playerId of playersInQueue) {
+            await this.playerService.removePlayerFromQueue(playerId, this.config.id);
+        }
+        // Update the queue message to show disabled state
+        await this.updateQueueMessage();
+        console.log(`Queue ${this.config.displayName} disabled, removed ${playersInQueue.length} players`);
+    }
+    async enable() {
+        console.log(`Enabling queue: ${this.config.displayName}`);
+        this.disabled = false;
+        // Update the queue message to show enabled state
+        await this.updateQueueMessage();
+        console.log(`Queue ${this.config.displayName} enabled`);
+    }
+    isDisabled() {
+        return this.disabled;
     }
     async shutdown() {
         try {

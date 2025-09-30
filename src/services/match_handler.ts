@@ -281,7 +281,7 @@ export class MatchHandler {
           new ButtonBuilder()
             .setCustomId(`vote_team1_${this.match.id}`)
             .setLabel(`${TeamName.TEAM1} Wins`)
-            .setStyle(ButtonStyle.Primary),
+            .setStyle(ButtonStyle.Danger),
           new ButtonBuilder()
             .setCustomId(`vote_team2_${this.match.id}`)
             .setLabel(`${TeamName.TEAM2} Wins`)
@@ -289,7 +289,7 @@ export class MatchHandler {
           new ButtonBuilder()
             .setCustomId(`vote_cancel_${this.match.id}`)
             .setLabel('Cancel Match')
-            .setStyle(ButtonStyle.Danger)
+            .setStyle(ButtonStyle.Secondary)
         );
     } else if (this.match.state === MatchState.COMPLETED || this.match.state === MatchState.CANCELLED) {
 

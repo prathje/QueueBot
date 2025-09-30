@@ -1,10 +1,11 @@
-import { Client, GatewayIntentBits, Guild } from 'discord.js';
+import { Client, GatewayIntentBits, Guild, ChatInputCommandInteraction } from 'discord.js';
 import { config, validateEnvironment } from './config/environment';
 import { connectToDatabase } from './config/database';
 import { Gamemode } from './services/gamemode';
 import { StartupResetService } from './services/startup_reset';
 import { Mutex } from './utils/mutex';
 import { GamemodeConfig } from './types';
+import { deployCommands } from './commands/deploy';
 
 class TeeWorldsLeagueBot {
   private client: Client;
@@ -31,6 +32,11 @@ class TeeWorldsLeagueBot {
       await this.initializeBot();
     });
 
+    this.client.on('interactionCreate', async (interaction) => {
+      if (!interaction.isChatInputCommand()) return;
+      await this.handleSlashCommand(interaction);
+    });
+
     this.client.on('error', (error) => {
       console.error('Discord client error:', error);
     });
@@ -54,6 +60,12 @@ class TeeWorldsLeagueBot {
       }
 
       console.log(`Connected to guild: ${this.guild.name}`);
+
+      // Deploy slash commands using the client's application ID
+      if (!this.client.application?.id) {
+        throw new Error('Could not get application ID from client');
+      }
+      await deployCommands(this.client.application.id);
 
       // Reset all matches and players on startup
       await StartupResetService.performStartupReset(this.guild);
@@ -147,6 +159,52 @@ class TeeWorldsLeagueBot {
     }
 
     console.log('All gamemodes initialized successfully!');
+  }
+
+  private async handleSlashCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+    try {
+      const { commandName, channelId } = interaction;
+
+      if (commandName === 'queue_disable' || commandName === 'queue_enable') {
+        // Find the queue that matches this channel
+        let targetQueue = null;
+        for (const gamemode of this.gamemodes.values()) {
+          const queue = gamemode.getQueueByChannelId(channelId!);
+          if (queue) {
+            targetQueue = queue;
+            break;
+          }
+        }
+
+        if (!targetQueue) {
+          await interaction.reply({
+            content: 'This command can only be used in a queue channel.',
+            ephemeral: true
+          });
+          return;
+        }
+
+        if (commandName === 'queue_disable') {
+          await targetQueue.disable();
+          await interaction.reply({
+            content: `Queue **${targetQueue.getDisplayName()}** has been disabled. All players have been removed.`,
+            ephemeral: true
+          });
+        } else {
+          await targetQueue.enable();
+          await interaction.reply({
+            content: `Queue **${targetQueue.getDisplayName()}** has been enabled.`,
+            ephemeral: true
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error handling slash command:', error);
+      await interaction.reply({
+        content: 'An error occurred while executing the command.',
+        ephemeral: true
+      });
+    }
   }
 
   async start(): Promise<void> {
