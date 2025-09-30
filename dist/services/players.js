@@ -5,6 +5,7 @@ const Player_1 = require("../models/Player");
 class PlayerService {
     constructor() {
         this.players = new Map();
+        this.queueUpdateCallbacks = new Map();
     }
     static getInstance() {
         if (!PlayerService.instance) {
@@ -99,16 +100,24 @@ class PlayerService {
         if (!player) {
             throw new Error('Player not found');
         }
+        const wasInQueue = player.currentQueues.includes(queueId);
         player.currentQueues = player.currentQueues.filter(q => q !== queueId);
         await this.updatePlayer(player);
+        // Notify the specific queue to update its display if player was actually in it
+        if (wasInQueue) {
+            await this.notifyQueuesUpdate([queueId]);
+        }
     }
     async removePlayerFromAllQueues(discordId) {
         const player = await this.getPlayer(discordId);
         if (!player) {
             throw new Error('Player not found');
         }
+        const affectedQueues = [...player.currentQueues];
         player.currentQueues = [];
         await this.updatePlayer(player);
+        // Notify affected queues to update their displays
+        await this.notifyQueuesUpdate(affectedQueues);
     }
     async setPlayerMatch(discordId, matchId) {
         const player = await this.getPlayer(discordId);
@@ -134,6 +143,25 @@ class PlayerService {
             }
         }
         return playersInQueue;
+    }
+    registerQueueUpdateCallback(queueId, callback) {
+        this.queueUpdateCallbacks.set(queueId, callback);
+    }
+    unregisterQueueUpdateCallback(queueId) {
+        this.queueUpdateCallbacks.delete(queueId);
+    }
+    async notifyQueuesUpdate(queueIds) {
+        for (const queueId of queueIds) {
+            const callback = this.queueUpdateCallbacks.get(queueId);
+            if (callback) {
+                try {
+                    await callback();
+                }
+                catch (error) {
+                    console.error(`Error updating queue ${queueId}:`, error);
+                }
+            }
+        }
     }
     async resetAllPlayers() {
         try {

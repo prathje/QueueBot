@@ -48,6 +48,8 @@ export class Queue {
     await this.setupQueueMessage();
     this.setupInteractionHandlers();
 
+    // Register this queue to receive updates when players are removed
+    this.playerService.registerQueueUpdateCallback(this.config.id, () => this.updateQueueMessage());
   }
 
   private async ensureChannel(): Promise<void> {
@@ -113,8 +115,10 @@ export class Queue {
   }
 
   private async updateQueueMessage(): Promise<void> {
+
     if (!this.queueMessage) return;
 
+    console.debug("updateQueueMessage");
     const embed = this.createQueueEmbed();
     const row = this.createQueueButtons();
 
@@ -294,6 +298,10 @@ export class Queue {
 
       if (match) {
         console.log(`Match created: ${match.id}`);
+
+        // queues get notified and the match gets saved in the db in here
+        await this.playerService.onPlayersFoundMatch(match.players, match.id);
+
         const matchHandler = new MatchHandler(
           this.client,
           this.guild,
@@ -312,8 +320,6 @@ export class Queue {
         );
         await matchHandler.initialize();
         this.activeMatches.set(match.id, matchHandler);
-
-        await this.updateQueueMessage();
       }
     }).catch(error => {
       console.error('Error checking for match:', error);
@@ -343,6 +349,9 @@ export class Queue {
   async shutdown(): Promise<void> {
     try {
       console.log(`Shutting down queue: ${this.config.displayName}`);
+
+      // Unregister from player service updates
+      this.playerService.unregisterQueueUpdateCallback(this.config.id);
 
       // Clean up event listeners
       this.cleanupInteractionHandlers();

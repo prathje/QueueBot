@@ -42,11 +42,6 @@ export class MatchmakingService {
       updatedAt: new Date()
     };
 
-    for (const playerId of selectedPlayers) {
-      await this.playerService.removePlayerFromAllQueues(playerId);
-      await this.playerService.setPlayerMatch(playerId, match.id);
-    }
-
     return match;
   }
 

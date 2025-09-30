@@ -511,12 +511,25 @@ class MatchHandler {
         }, 10000);
     }
     async closeMatch() {
+        // Clear any timeouts
+        if (this.readyTimeout) {
+            clearTimeout(this.readyTimeout);
+            this.readyTimeout = null;
+        }
+        if (this.voteTimeout) {
+            clearTimeout(this.voteTimeout);
+            this.voteTimeout = null;
+        }
+        // Clean up player notification messages before setting match state
+        await this.updatePlayerNotifications();
+        if (this.match.state === types_1.MatchState.CLOSED) {
+            console.log(`Match ${this.match.id} is already closed`);
+            return;
+        }
         this.match.state = types_1.MatchState.CLOSED;
         await this.updateMatch();
         // Clean up event listeners first
         this.cleanupInteractionHandlers();
-        // Clean up player notification messages
-        await this.cleanupPlayerNotifications();
         for (const playerId of this.match.players) {
             await this.playerService.setPlayerMatch(playerId, null);
         }
@@ -602,26 +615,9 @@ class MatchHandler {
     }
     async forceCancel(reason = 'Force cancelled by administrator') {
         console.log(`Force cancelling match ${this.match.id}: ${reason}`);
-        // Clean up event listeners
-        this.cleanupInteractionHandlers();
-        // Clean up player notification messages
-        await this.cleanupPlayerNotifications();
-        // Clear any timeouts
-        if (this.readyTimeout) {
-            clearTimeout(this.readyTimeout);
-            this.readyTimeout = null;
-        }
-        if (this.voteTimeout) {
-            clearTimeout(this.voteTimeout);
-            this.voteTimeout = null;
-        }
         // Update match state
         this.match.state = types_1.MatchState.CANCELLED;
         await this.updateMatch();
-        // Free players
-        for (const playerId of this.match.players) {
-            await this.playerService.setPlayerMatch(playerId, null);
-        }
         // Send notification if channel exists
         if (this.channel) {
             try {
@@ -637,42 +633,7 @@ class MatchHandler {
                 console.error('Error sending force cancel message:', error);
             }
         }
-        // Mark as closed
-        this.match.state = types_1.MatchState.CLOSED;
-        await this.updateMatch();
-    }
-    async forceDelete() {
-        try {
-            // Clean up event listeners first
-            this.cleanupInteractionHandlers();
-            // Clean up player notification messages
-            await this.cleanupPlayerNotifications();
-            if (this.channel) {
-                await this.channel.delete();
-                this.match.discordChannelId = null;
-                this.channel = null;
-            }
-            if (this.voiceChannel1) {
-                await this.voiceChannel1.delete();
-                this.match.discordVoiceChannel1Id = null;
-                this.voiceChannel1 = null;
-            }
-            if (this.voiceChannel2) {
-                await this.voiceChannel2.delete();
-                this.match.discordVoiceChannel2Id = null;
-                this.voiceChannel2 = null;
-            }
-            console.log(`Match ${this.match.id} closed and channels deleted`);
-            await this.updateMatch();
-            console.log(`Force deleted channels for match ${this.match.id}`);
-            // Notify queue to remove this match handler
-            if (this.onMatchClose) {
-                this.onMatchClose(this.match.id);
-            }
-        }
-        catch (error) {
-            console.error('Error force deleting match channels:', error);
-        }
+        await this.closeMatch();
     }
     async notifyPlayersOfMatchChannel() {
         if (!this.channel) {
@@ -685,13 +646,13 @@ class MatchHandler {
                 const user = await this.client.users.fetch(playerId);
                 const embed = new discord_js_1.EmbedBuilder()
                     .setTitle('🎮 Match Found!')
-                    .setDescription(`Your match is ready! Click the link below to join the match channel.`)
+                    .setDescription(`Your match is ready! Click the link above to join the match channel.`)
                     .addFields({ name: 'Match ID', value: this.match.id.slice(0, 8), inline: true }, { name: 'Map', value: this.match.map, inline: true }, { name: 'Players', value: `${this.match.players.length} players`, inline: true })
                     .setColor(0x00FF00)
                     .setTimestamp();
                 const notificationMessage = await user.send({
                     content: `**Match Found:** ${channelLink}`,
-                    embeds: [ /*embed*/]
+                    embeds: [embed]
                 });
                 // Store the message reference for later deletion
                 this.playerNotificationMessages.set(playerId, notificationMessage);
@@ -702,7 +663,7 @@ class MatchHandler {
             }
         }
     }
-    async cleanupPlayerNotifications() {
+    async updatePlayerNotifications() {
         if (this.playerNotificationMessages.size === 0) {
             return;
         }
@@ -723,7 +684,7 @@ class MatchHandler {
         let statusTitle;
         let statusDescription;
         let statusColor;
-        let finalScore = 'N/A';
+        let result = '';
         if (this.match.state === types_1.MatchState.COMPLETED) {
             // Try to get the match result to determine the winner
             try {
@@ -732,49 +693,50 @@ class MatchHandler {
                     const winnerTeam = matchResult.winningTeam === 1 ? this.match.teams.team1 : this.match.teams.team2;
                     const isWinner = winnerTeam.includes(playerId);
                     if (isWinner) {
-                        statusTitle = '🎉 Match Won!';
-                        statusDescription = `Congratulations! You won the match on ${this.match.map}!`;
+                        statusTitle = 'Match Won! 🎉';
+                        statusDescription = `Congratulations! You won the match!`;
                         statusColor = 0x00FF00; // Green
                     }
                     else {
-                        statusTitle = '😞 Match Lost';
-                        statusDescription = `You lost the match on ${this.match.map}. Better luck next time!`;
+                        statusTitle = 'Match Lost 😞';
+                        statusDescription = `You lost the match. Better luck next time!`;
                         statusColor = 0xFF0000; // Red
                     }
-                    finalScore = `Team ${matchResult.winningTeam} won`;
+                    result = `Team ${matchResult.winningTeam} won`;
                 }
                 else {
                     // Fallback if no match result found
-                    statusTitle = '✅ Match Completed';
-                    statusDescription = `Your match on ${this.match.map} has been completed.`;
+                    statusTitle = 'Match Completed ✅';
+                    statusDescription = `Your match has been completed.`;
                     statusColor = 0x0099FF; // Blue
                 }
             }
             catch (error) {
                 console.log(`Could not fetch match result for ${this.match.id}:`, error);
                 statusTitle = '✅ Match Completed';
-                statusDescription = `Your match on ${this.match.map} has been completed.`;
+                statusDescription = `Your match has been completed.`;
                 statusColor = 0x0099FF; // Blue
             }
         }
         else if (this.match.state === types_1.MatchState.CANCELLED) {
-            statusTitle = '❌ Match Cancelled';
-            statusDescription = `Your match on ${this.match.map} was cancelled. You can join new queues now.`;
-            statusColor = 0xFFA500; // Orange
+            statusTitle = 'Match Cancelled ❌';
+            statusDescription = `Your match was cancelled.`;
+            statusColor = 0xFFA500; // Orange+
+            result = 'Match cancelled';
         }
         else {
-            statusTitle = '🔚 Match Ended';
-            statusDescription = `Your match on ${this.match.map} has ended.`;
-            statusColor = 0x808080; // Gray
+            statusTitle = 'Match Closed';
+            statusDescription = `Your match has been closed.`;
+            statusColor = 0x808080; // Grey
         }
         const embed = new discord_js_1.EmbedBuilder()
             .setTitle(statusTitle)
             .setDescription(statusDescription)
-            .addFields({ name: 'Match ID', value: this.match.id.slice(0, 8), inline: true }, { name: 'Map', value: this.match.map, inline: true }, { name: 'Result', value: finalScore, inline: true })
+            .addFields({ name: 'Match ID', value: this.match.id.slice(0, 8), inline: true }, { name: 'Map', value: this.match.map, inline: true }, { name: 'Result', value: result, inline: true }, { name: 'Team 1', value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: 'Team 2', value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true })
             .setColor(statusColor)
             .setTimestamp();
         await message.edit({
-            content: `**Match Update:**`,
+            content: `**Match History**`,
             embeds: [embed]
         });
     }

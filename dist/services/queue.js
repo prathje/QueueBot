@@ -24,6 +24,8 @@ class Queue {
         await this.ensureChannel();
         await this.setupQueueMessage();
         this.setupInteractionHandlers();
+        // Register this queue to receive updates when players are removed
+        this.playerService.registerQueueUpdateCallback(this.config.id, () => this.updateQueueMessage());
     }
     async ensureChannel() {
         try {
@@ -268,6 +270,8 @@ class Queue {
     async shutdown() {
         try {
             console.log(`Shutting down queue: ${this.config.displayName}`);
+            // Unregister from player service updates
+            this.playerService.unregisterQueueUpdateCallback(this.config.id);
             // Clean up event listeners
             this.cleanupInteractionHandlers();
             // Cancel all active matches in this queue
@@ -311,7 +315,6 @@ class Queue {
             for (const matchHandler of matchHandlers) {
                 try {
                     await matchHandler.forceCancel('Queue shutdown - bot is restarting');
-                    await matchHandler.forceDelete();
                     this.removeMatch(matchHandler.getId());
                 }
                 catch (error) {

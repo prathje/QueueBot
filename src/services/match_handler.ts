@@ -588,10 +588,6 @@ export class MatchHandler {
     await this.updateMatch();
     await this.updateMatchMessage();
 
-    for (const playerId of this.match.players) {
-      await this.playerService.setPlayerMatch(playerId, null);
-    }
-
     if (this.channel) {
       await this.channel.send({
         content: `❌ **Match cancelled:** ${reason}`,

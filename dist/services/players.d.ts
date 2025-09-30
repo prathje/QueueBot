@@ -2,6 +2,7 @@ import { IPlayer } from '../types';
 export declare class PlayerService {
     private static instance;
     private players;
+    private queueUpdateCallbacks;
     private constructor();
     static getInstance(): PlayerService;
     getOrCreatePlayer(discordId: string, username: string): Promise<IPlayer>;
@@ -14,6 +15,9 @@ export declare class PlayerService {
     isPlayerInQueue(discordId: string, queueId: string): boolean;
     isPlayerInMatch(discordId: string): boolean;
     getPlayersInQueue(queueId: string): string[];
+    registerQueueUpdateCallback(queueId: string, callback: () => Promise<void>): void;
+    unregisterQueueUpdateCallback(queueId: string): void;
+    private notifyQueuesUpdate;
     resetAllPlayers(): Promise<number>;
 }
 //# sourceMappingURL=players.d.ts.map

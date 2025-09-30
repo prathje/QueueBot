@@ -4,6 +4,7 @@ import { IPlayer } from '../types';
 export class PlayerService {
   private static instance: PlayerService;
   private players: Map<string, IPlayer> = new Map();
+  private queueUpdateCallbacks: Map<string, () => Promise<void>> = new Map();
 
   private constructor() {}
 
@@ -111,18 +112,32 @@ export class PlayerService {
       throw new Error('Player not found');
     }
 
+    const wasInQueue = player.currentQueues.includes(queueId);
     player.currentQueues = player.currentQueues.filter(q => q !== queueId);
     await this.updatePlayer(player);
+
+    // Notify the specific queue to update its display if player was actually in it
+    if (wasInQueue) {
+      await this.notifyQueuesUpdate([queueId]);
+    }
   }
 
-  async removePlayerFromAllQueues(discordId: string): Promise<void> {
-    const player = await this.getPlayer(discordId);
-    if (!player) {
-      throw new Error('Player not found');
+  async onPlayersFoundMatch(discordIds: string[], matchId: string): Promise<void> {
+    // Collect all affected queues to notify after updates
+    const affectedQueues = new Set<string>();
+
+    for (const discordId of discordIds) {
+        const player = await this.getPlayer(discordId);
+        if (player) {
+            player.currentQueues.forEach(queueId => affectedQueues.add(queueId));
+            player.currentQueues = [];
+            player.currentMatch = matchId;
+            await this.updatePlayer(player);
+        }
     }
 
-    player.currentQueues = [];
-    await this.updatePlayer(player);
+    // Notify affected queues to update their displays
+    await this.notifyQueuesUpdate(Array.from(affectedQueues));
   }
 
   async setPlayerMatch(discordId: string, matchId: string | null): Promise<void> {
@@ -132,6 +147,7 @@ export class PlayerService {
     }
 
     player.currentMatch = matchId;
+
     await this.updatePlayer(player);
   }
 
@@ -153,6 +169,27 @@ export class PlayerService {
       }
     }
     return playersInQueue;
+  }
+
+  registerQueueUpdateCallback(queueId: string, callback: () => Promise<void>): void {
+    this.queueUpdateCallbacks.set(queueId, callback);
+  }
+
+  unregisterQueueUpdateCallback(queueId: string): void {
+    this.queueUpdateCallbacks.delete(queueId);
+  }
+
+  private async notifyQueuesUpdate(queueIds: string[]): Promise<void> {
+    for (const queueId of queueIds) {
+      const callback = this.queueUpdateCallbacks.get(queueId);
+      if (callback) {
+        try {
+          await callback();
+        } catch (error) {
+          console.error(`Error updating queue ${queueId}:`, error);
+        }
+      }
+    }
   }
 
   async resetAllPlayers(): Promise<number> {
