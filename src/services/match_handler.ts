@@ -610,11 +610,6 @@ export class MatchHandler {
 
   private async closeMatch(): Promise<void> {
 
-    if (this.match.state === MatchState.CLOSED) {
-        console.log(`Match ${this.match.id} is already closed`);
-        return;
-    }
-
     // Clear any timeouts
     if (this.readyTimeout) {
       clearTimeout(this.readyTimeout);
@@ -628,12 +623,16 @@ export class MatchHandler {
     // Clean up player notification messages before setting match state
     await this.updatePlayerNotifications();
 
+    if (this.match.state === MatchState.CLOSED) {
+      console.log(`Match ${this.match.id} is already closed`);
+      return;
+    }
+
     this.match.state = MatchState.CLOSED;
     await this.updateMatch();
 
     // Clean up event listeners first
     this.cleanupInteractionHandlers();
-
 
     for (const playerId of this.match.players) {
       await this.playerService.setPlayerMatch(playerId, null);
