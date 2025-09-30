@@ -221,13 +221,13 @@ class MatchHandler {
                 .addComponents(new discord_js_1.ButtonBuilder()
                 .setCustomId(`vote_team1_${this.match.id}`)
                 .setLabel(`${types_1.TeamName.TEAM1} Wins`)
-                .setStyle(discord_js_1.ButtonStyle.Primary), new discord_js_1.ButtonBuilder()
+                .setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder()
                 .setCustomId(`vote_team2_${this.match.id}`)
                 .setLabel(`${types_1.TeamName.TEAM2} Wins`)
                 .setStyle(discord_js_1.ButtonStyle.Primary), new discord_js_1.ButtonBuilder()
                 .setCustomId(`vote_cancel_${this.match.id}`)
                 .setLabel('Cancel Match')
-                .setStyle(discord_js_1.ButtonStyle.Danger));
+                .setStyle(discord_js_1.ButtonStyle.Secondary));
         }
         else if (this.match.state === types_1.MatchState.COMPLETED || this.match.state === types_1.MatchState.CANCELLED) {
             if (this.onPlayersJoinQueue) { // we only show autojoin if we have a callback to rejoin!

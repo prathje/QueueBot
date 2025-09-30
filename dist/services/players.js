@@ -103,10 +103,6 @@ class PlayerService {
         const wasInQueue = player.currentQueues.includes(queueId);
         player.currentQueues = player.currentQueues.filter(q => q !== queueId);
         await this.updatePlayer(player);
-        // Notify the specific queue to update its display if player was actually in it
-        if (wasInQueue) {
-            await this.notifyQueuesUpdate([queueId]);
-        }
     }
     async onPlayersFoundMatch(discordIds, matchId) {
         // Collect all affected queues to notify after updates

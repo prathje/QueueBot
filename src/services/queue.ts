@@ -138,7 +138,7 @@ export class Queue {
 
     const embed = new EmbedBuilder()
       .setTitle(`${this.config.displayName} Queue`)
-      .setDescription(`Map Pool: ${this.config.mapPool.join(', ')}`)
+      .setDescription(`**Map Pool:** ${this.config.mapPool.join(', ')}`)
       .setTimestamp();
 
     if (this.disabled) {
@@ -449,7 +449,7 @@ export class Queue {
       if (this.queueMessage) {
         const shutdownEmbed = new EmbedBuilder()
           .setTitle(`${this.config.displayName} Queue`)
-          .setDescription(`Map Pool: ${this.config.mapPool.join(', ')}`)
+          .setDescription(`**Map Pool:** ${this.config.mapPool.join(', ')}`)
           .addFields(
             { name: 'Status', value: '💤 Queue is currently sleeping', inline: true },
             { name: 'Info', value: 'Bot is restarting or shutting down', inline: true }

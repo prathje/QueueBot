@@ -86,52 +86,52 @@ class TeeWorldsLeagueBot {
           {
             id: 'gctf_2v2',
             displayName: 'gCTF 2v2',
-            mapPool: ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5'],
+            mapPool: ['ctf3', 'ctf4_old', 'ctf_cryochasm', 'ctf_5_limited', 'ctf_duskwood', 'ctf_tantum', 'ctf_mine', 'ctf_planet', 'ctf_ambiance'],
             playerCount: 4,
             matchmakingAlgorithm: 'random teams'
           },
           {
             id: 'gctf_3v3',
             displayName: 'gCTF 3v3',
-            mapPool: ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5'],
+            mapPool: ['ctf2', 'ctf_5_limited', 'ctf_duskwood', 'ctf_mars', 'ctf_moon', 'ctf_chryochasm', 'ctf_exeliar', 'ctf_gartum'],
             playerCount: 6,
             matchmakingAlgorithm: 'random teams'
           }
         ]
       },
-      {
-        id: 'ctf',
-        displayName: 'Vanilla CTF',
-        queues: [
-          {
-            id: 'ctf_2v2',
-            displayName: 'CTF 2v2',
-            mapPool: ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5'],
-            playerCount: 4,
-            matchmakingAlgorithm: 'random teams'
-          },
-          {
-            id: 'ctf_3v3',
-            displayName: 'CTF 3v3',
-            mapPool: ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5'],
-            playerCount: 6,
-            matchmakingAlgorithm: 'random teams'
-          }
-        ]
-      },
-      {
-        id: 'dm',
-        displayName: 'Vanilla DM',
-        queues: [
-          {
-            id: 'dm_1v1',
-            displayName: 'DM 1v1',
-            mapPool: ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5'],
-            playerCount: 2,
-            matchmakingAlgorithm: 'random teams'
-          }
-        ]
-      },
+      // {
+      //   id: 'ctf',
+      //   displayName: 'Vanilla CTF',
+      //   queues: [
+      //     {
+      //       id: 'ctf_2v2',
+      //       displayName: 'CTF 2v2',
+      //       mapPool: ['ctf3', 'ctf4_old', 'ctf5', 'ctf5_spikes', 'ctf_cryochasm', 'ctf_5_limited', 'ctf_duskwood', 'ctf_tantum', 'ctf_mine', 'ctf_planet', 'ctf_ambiance', 'ctf_ambiance_limited'],
+      //       playerCount: 4,
+      //       matchmakingAlgorithm: 'random teams'
+      //     },
+      //     {
+      //       id: 'ctf_3v3',
+      //       displayName: 'CTF 3v3',
+      //       mapPool: ['ctf2', 'ctf_mars', 'ctf_moon'],
+      //       playerCount: 6,
+      //       matchmakingAlgorithm: 'random teams'
+      //     }
+      //   ]
+      // },
+      // {
+      //   id: 'dm',
+      //   displayName: 'Vanilla DM',
+      //   queues: [
+      //     {
+      //       id: 'dm_1v1',
+      //       displayName: 'DM 1v1',
+      //       mapPool: ['ctf3', 'ctf4_old', 'ctf5'],
+      //       playerCount: 2,
+      //       matchmakingAlgorithm: 'random teams'
+      //     }
+      //   ]
+      // },
       {
         id: 'test',
         displayName: 'Test',
