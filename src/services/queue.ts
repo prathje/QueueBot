@@ -118,7 +118,6 @@ export class Queue {
 
     if (!this.queueMessage) return;
 
-    console.debug("updateQueueMessage");
     const embed = this.createQueueEmbed();
     const row = this.createQueueButtons();
 
