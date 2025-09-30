@@ -128,8 +128,12 @@ class Queue {
             .setLabel('Leave Queue')
             .setStyle(discord_js_1.ButtonStyle.Danger)
             .setDisabled(this.disabled);
+        const refreshButton = new discord_js_1.ButtonBuilder()
+            .setCustomId(`refresh_queue_${this.config.id}`)
+            .setLabel('🔄 Refresh')
+            .setStyle(discord_js_1.ButtonStyle.Secondary);
         return new discord_js_1.ActionRowBuilder()
-            .addComponents(joinButton, leaveButton);
+            .addComponents(joinButton, leaveButton, refreshButton);
     }
     setupInteractionHandlers() {
         const m = new mutex_1.Mutex();
@@ -142,6 +146,9 @@ class Queue {
             }
             else if (customId === `leave_queue_${this.config.id}`) {
                 await m.runExclusive(() => this.handleLeaveQueue(interaction));
+            }
+            else if (customId === `refresh_queue_${this.config.id}`) {
+                await m.runExclusive(() => this.handleRefreshQueue(interaction));
             }
         };
         this.client.on('interactionCreate', this.interactionListener);
@@ -217,6 +224,22 @@ class Queue {
             console.error('Error handling leave queue:', error);
             await interaction.reply({
                 content: 'An error occurred while leaving the queue.',
+                flags: discord_js_1.MessageFlags.Ephemeral
+            });
+        }
+    }
+    async handleRefreshQueue(interaction) {
+        try {
+            await interaction.reply({
+                content: '🔄 Queue refreshed!',
+                flags: discord_js_1.MessageFlags.Ephemeral
+            });
+            await this.updateQueueMessage();
+        }
+        catch (error) {
+            console.error('Error handling queue refresh:', error);
+            await interaction.reply({
+                content: 'An error occurred while refreshing the queue.',
                 flags: discord_js_1.MessageFlags.Ephemeral
             });
         }

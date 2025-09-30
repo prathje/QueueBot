@@ -173,8 +173,13 @@ export class Queue {
       .setStyle(ButtonStyle.Danger)
       .setDisabled(this.disabled);
 
+    const refreshButton = new ButtonBuilder()
+      .setCustomId(`refresh_queue_${this.config.id}`)
+      .setLabel('🔄 Refresh')
+      .setStyle(ButtonStyle.Secondary);
+
     return new ActionRowBuilder<ButtonBuilder>()
-      .addComponents(joinButton, leaveButton);
+      .addComponents(joinButton, leaveButton /*, refreshButton */);
   }
 
   private setupInteractionHandlers(): void {
@@ -190,6 +195,8 @@ export class Queue {
         await m.runExclusive(() => this.handleJoinQueue(interaction));
       } else if (customId === `leave_queue_${this.config.id}`) {
         await m.runExclusive(() => this.handleLeaveQueue(interaction));
+      } else if (customId === `refresh_queue_${this.config.id}`) {
+        await m.runExclusive(() => this.handleRefreshQueue(interaction));
       }
     };
 
@@ -278,6 +285,24 @@ export class Queue {
       console.error('Error handling leave queue:', error);
       await interaction.reply({
         content: 'An error occurred while leaving the queue.',
+        flags: MessageFlags.Ephemeral
+      });
+    }
+  }
+
+  private async handleRefreshQueue(interaction: ButtonInteraction): Promise<void> {
+    try {
+      await this.updateQueueMessage();
+
+      await interaction.reply({
+        content: '🔄 Refreshed!',
+        flags: MessageFlags.Ephemeral
+      });
+
+    } catch (error) {
+      console.error('Error handling queue refresh:', error);
+      await interaction.reply({
+        content: 'An error occurred while refreshing the queue.',
         flags: MessageFlags.Ephemeral
       });
     }

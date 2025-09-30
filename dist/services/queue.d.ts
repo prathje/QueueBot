@@ -29,6 +29,7 @@ export declare class Queue {
     private cleanupInteractionHandlers;
     private handleJoinQueue;
     private handleLeaveQueue;
+    private handleRefreshQueue;
     private addSinglePlayerProgrammatically;
     private addPlayersToQueue;
     checkForMatch(): Promise<void>;

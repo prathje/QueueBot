@@ -7,7 +7,7 @@ export declare const config: {
         uri: string;
     };
     api: {
-        webhookUrl: string;
+        resultsWebhookUrl: string;
     };
 };
 export declare function validateEnvironment(): void;

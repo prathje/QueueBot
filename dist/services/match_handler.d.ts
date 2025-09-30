@@ -30,6 +30,7 @@ export declare class MatchHandler {
     private setupInteractionHandlers;
     private cleanupInteractionHandlers;
     private handleAutojoinRegistration;
+    private handleRefreshMatch;
     private startReadyPhase;
     private handleReady;
     private startMatch;

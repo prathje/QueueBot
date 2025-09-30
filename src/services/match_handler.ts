@@ -196,6 +196,33 @@ export class MatchHandler {
     }
   }
 
+  private async setupMatchMessage(): Promise<void> {
+    if (!this.channel) return;
+
+    const embed = this.createMatchEmbed();
+    const buttons = this.createMatchButtons();
+
+    try {
+      const messageOptions: any = {
+        content: `Match found! <@${this.match.players.join('> <@')}>`,
+        embeds: [embed]
+      };
+
+      if (buttons) {
+        // Handle both single row and multiple rows
+        if (Array.isArray(buttons)) {
+          messageOptions.components = buttons;
+        } else {
+          messageOptions.components = [buttons];
+        }
+      }
+
+      this.matchMessage = await this.channel.send(messageOptions);
+    } catch (error) {
+      console.error('Error setting up match message:', error);
+    }
+  }
+
   private createMatchEmbed(): EmbedBuilder {
     const embed = new EmbedBuilder()
       .setTitle(`Match ${this.match.id.slice(0, 8)}`)
@@ -245,16 +272,23 @@ export class MatchHandler {
   }
 
   private createMatchButtons(): ActionRowBuilder<ButtonBuilder> | null {
+
+    const refreshButton = new ButtonBuilder()
+        .setCustomId(`refresh_match_${this.match.id}`)
+        .setLabel('🔄 Refresh')
+        .setStyle(ButtonStyle.Secondary);
+
     if (this.match.state === MatchState.READY_UP) {
       return new ActionRowBuilder<ButtonBuilder>()
         .addComponents(
           new ButtonBuilder()
             .setCustomId(`ready_${this.match.id}`)
             .setLabel('Ready Up!')
-            .setStyle(ButtonStyle.Success)
+            .setStyle(ButtonStyle.Success),
+            refreshButton
         );
     } else if (this.match.state === MatchState.IN_PROGRESS) {
-      return new ActionRowBuilder<ButtonBuilder>()
+      const row1 = new ActionRowBuilder<ButtonBuilder>()
         .addComponents(
           new ButtonBuilder()
             .setCustomId(`vote_team1_${this.match.id}`)
@@ -269,6 +303,13 @@ export class MatchHandler {
             .setLabel('Cancel Match')
             .setStyle(ButtonStyle.Secondary)
         );
+
+      const row2 = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+            refreshButton
+        );
+
+      return [row1, row2] as any; // Return multiple rows for voting phase
     } else if (this.match.state === MatchState.COMPLETED || this.match.state === MatchState.CANCELLED) {
 
       if (this.onPlayersJoinQueue) { // we only show autojoin if we have a callback to rejoin!
@@ -277,7 +318,13 @@ export class MatchHandler {
             new ButtonBuilder()
               .setCustomId(`autojoin_queue_${this.match.id}`)
               .setLabel('🔄 Auto-join Next Queue')
-              .setStyle(ButtonStyle.Secondary)
+              .setStyle(ButtonStyle.Secondary),
+              refreshButton
+          );
+      } else {
+        return new ActionRowBuilder<ButtonBuilder>()
+          .addComponents(
+              refreshButton
           );
       }
     }
@@ -304,6 +351,8 @@ export class MatchHandler {
         await m.runExclusive(() => this.handleVote(interaction, 'cancel'));
       } else if (customId === `autojoin_queue_${this.match.id}`) {
         await m.runExclusive(() => this.handleAutojoinRegistration(interaction));
+      } else if (customId === `refresh_match_${this.match.id}`) {
+        await m.runExclusive(() => this.handleRefreshMatch(interaction));
       }
     };
 
@@ -352,6 +401,24 @@ export class MatchHandler {
       console.error('Error handling autojoin registration:', error);
       await interaction.reply({
         content: 'An error occurred while registering for auto-join.',
+        flags: MessageFlags.Ephemeral
+      });
+    }
+  }
+
+  private async handleRefreshMatch(interaction: ButtonInteraction): Promise<void> {
+    try {
+      await this.updateMatchMessage();
+
+      await interaction.reply({
+        content: '🔄 Refreshed!',
+        flags: MessageFlags.Ephemeral
+      });
+
+    } catch (error) {
+      console.error('Error handling match refresh:', error);
+      await interaction.reply({
+        content: 'An error occurred while refreshing the match.',
         flags: MessageFlags.Ephemeral
       });
     }
@@ -734,17 +801,21 @@ export class MatchHandler {
     if (!this.channel) return;
 
     const embed = this.createMatchEmbed();
-    const row = this.createMatchButtons();
-
+    const buttons = this.createMatchButtons();
 
     try {
       const messageOptions: any = {
         content: `Match found! <@${this.match.players.join('> <@')}>`,
         embeds: [embed]
       };
-      
-      if (row) {
-        messageOptions.components = [row];
+
+      if (buttons) {
+        // Handle both single row and multiple rows
+        if (Array.isArray(buttons)) {
+          messageOptions.components = buttons;
+        } else {
+          messageOptions.components = [buttons];
+        }
       } else {
         messageOptions.components = [];
       }

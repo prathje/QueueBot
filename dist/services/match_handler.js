@@ -32,7 +32,6 @@ class MatchHandler {
         await this.saveMatch();
         await this.createMatchChannel();
         await this.createVoiceChannels();
-        await this.setupMatchMessage();
         this.setupInteractionHandlers();
         this.match.state = types_1.MatchState.CREATED;
         await this.updateMatch();
@@ -164,14 +163,20 @@ class MatchHandler {
         if (!this.channel)
             return;
         const embed = this.createMatchEmbed();
-        const row = this.createMatchButtons();
+        const buttons = this.createMatchButtons();
         try {
             const messageOptions = {
                 content: `Match found! <@${this.match.players.join('> <@')}>`,
                 embeds: [embed]
             };
-            if (row) {
-                messageOptions.components = [row];
+            if (buttons) {
+                // Handle both single row and multiple rows
+                if (Array.isArray(buttons)) {
+                    messageOptions.components = buttons;
+                }
+                else {
+                    messageOptions.components = [buttons];
+                }
             }
             this.matchMessage = await this.channel.send(messageOptions);
         }
@@ -215,10 +220,13 @@ class MatchHandler {
                 .addComponents(new discord_js_1.ButtonBuilder()
                 .setCustomId(`ready_${this.match.id}`)
                 .setLabel('Ready Up!')
-                .setStyle(discord_js_1.ButtonStyle.Success));
+                .setStyle(discord_js_1.ButtonStyle.Success), new discord_js_1.ButtonBuilder()
+                .setCustomId(`refresh_match_${this.match.id}`)
+                .setLabel('🔄 Refresh')
+                .setStyle(discord_js_1.ButtonStyle.Secondary));
         }
         else if (this.match.state === types_1.MatchState.IN_PROGRESS) {
-            return new discord_js_1.ActionRowBuilder()
+            const row1 = new discord_js_1.ActionRowBuilder()
                 .addComponents(new discord_js_1.ButtonBuilder()
                 .setCustomId(`vote_team1_${this.match.id}`)
                 .setLabel(`${types_1.TeamName.TEAM1} Wins`)
@@ -229,6 +237,12 @@ class MatchHandler {
                 .setCustomId(`vote_cancel_${this.match.id}`)
                 .setLabel('Cancel Match')
                 .setStyle(discord_js_1.ButtonStyle.Secondary));
+            const row2 = new discord_js_1.ActionRowBuilder()
+                .addComponents(new discord_js_1.ButtonBuilder()
+                .setCustomId(`refresh_match_${this.match.id}`)
+                .setLabel('🔄 Refresh')
+                .setStyle(discord_js_1.ButtonStyle.Secondary));
+            return [row1, row2]; // Return multiple rows for voting phase
         }
         else if (this.match.state === types_1.MatchState.COMPLETED || this.match.state === types_1.MatchState.CANCELLED) {
             if (this.onPlayersJoinQueue) { // we only show autojoin if we have a callback to rejoin!
@@ -236,6 +250,16 @@ class MatchHandler {
                     .addComponents(new discord_js_1.ButtonBuilder()
                     .setCustomId(`autojoin_queue_${this.match.id}`)
                     .setLabel('🔄 Auto-join Next Queue')
+                    .setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder()
+                    .setCustomId(`refresh_match_${this.match.id}`)
+                    .setLabel('🔄 Refresh')
+                    .setStyle(discord_js_1.ButtonStyle.Secondary));
+            }
+            else {
+                return new discord_js_1.ActionRowBuilder()
+                    .addComponents(new discord_js_1.ButtonBuilder()
+                    .setCustomId(`refresh_match_${this.match.id}`)
+                    .setLabel('🔄 Refresh')
                     .setStyle(discord_js_1.ButtonStyle.Secondary));
             }
         }
@@ -261,6 +285,9 @@ class MatchHandler {
             }
             else if (customId === `autojoin_queue_${this.match.id}`) {
                 await m.runExclusive(() => this.handleAutojoinRegistration(interaction));
+            }
+            else if (customId === `refresh_match_${this.match.id}`) {
+                await this.handleRefreshMatch(interaction);
             }
         };
         this.client.on('interactionCreate', this.interactionListener);
@@ -305,6 +332,22 @@ class MatchHandler {
             console.error('Error handling autojoin registration:', error);
             await interaction.reply({
                 content: 'An error occurred while registering for auto-join.',
+                flags: discord_js_1.MessageFlags.Ephemeral
+            });
+        }
+    }
+    async handleRefreshMatch(interaction) {
+        try {
+            await interaction.reply({
+                content: '🔄 Match refreshed!',
+                flags: discord_js_1.MessageFlags.Ephemeral
+            });
+            await this.updateMatchMessage();
+        }
+        catch (error) {
+            console.error('Error handling match refresh:', error);
+            await interaction.reply({
+                content: 'An error occurred while refreshing the match.',
                 flags: discord_js_1.MessageFlags.Ephemeral
             });
         }
@@ -485,7 +528,7 @@ class MatchHandler {
         }, 10000);
     }
     async postMatchToWebhook(winningTeam) {
-        if (!environment_1.config.api.webhookUrl) {
+        if (!environment_1.config.api.resultsWebhookUrl) {
             console.log('No RESULTS_WEBHOOK_URL configured, skipping match posting');
             return;
         }
@@ -517,9 +560,9 @@ class MatchHandler {
             }));
             // Create the match data payload based on the provided format
             const matchData = {
-                server: "unnamed server", // Static for now
+                server: "queue", // Static for now
                 map: this.match.map,
-                game_type: "gctf", // Could be dynamic based on gamemode
+                game_type: this.match.gamemodeId, // Could be dynamic based on gamemode
                 // game_duration_seconds: 67, // Not available - commented out
                 // score_limit: 200, // Not available - commented out
                 // time_limit: 0, // Not available - commented out
@@ -527,7 +570,7 @@ class MatchHandler {
                 // score_blue: winningTeam === 2 ? "WIN" : "LOSS", // Simplified for now
                 players: playersWithNames
             };
-            const response = await fetch(environment_1.config.api.webhookUrl, {
+            const response = await fetch(environment_1.config.api.resultsWebhookUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -641,21 +684,33 @@ class MatchHandler {
         }
     }
     async updateMatchMessage() {
-        if (!this.matchMessage)
+        if (!this.channel)
             return;
         const embed = this.createMatchEmbed();
-        const row = this.createMatchButtons();
+        const buttons = this.createMatchButtons();
         try {
-            const editOptions = {
+            const messageOptions = {
+                content: `Match found! <@${this.match.players.join('> <@')}>`,
                 embeds: [embed]
             };
-            if (row) {
-                editOptions.components = [row];
+            if (buttons) {
+                // Handle both single row and multiple rows
+                if (Array.isArray(buttons)) {
+                    messageOptions.components = buttons;
+                }
+                else {
+                    messageOptions.components = [buttons];
+                }
             }
             else {
-                editOptions.components = [];
+                messageOptions.components = [];
             }
-            await this.matchMessage.edit(editOptions);
+            if (this.matchMessage) {
+                await this.matchMessage.edit(messageOptions);
+            }
+            else {
+                this.matchMessage = await this.channel.send(messageOptions);
+            }
         }
         catch (error) {
             console.error('Error updating match message:', error);
