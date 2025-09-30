@@ -151,6 +151,7 @@ export class PlayerService {
     await this.updatePlayer(player);
   }
 
+
   isPlayerInQueue(discordId: string, queueId: string): boolean {
     const player = this.players.get(discordId);
     return player ? player.currentQueues.includes(queueId) : false;

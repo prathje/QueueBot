@@ -10,7 +10,7 @@ export declare class PlayerService {
     updatePlayer(player: IPlayer): Promise<void>;
     addPlayerToQueue(discordId: string, queueId: string): Promise<void>;
     removePlayerFromQueue(discordId: string, queueId: string): Promise<void>;
-    removePlayerFromAllQueues(discordId: string): Promise<void>;
+    onPlayersFoundMatch(discordIds: string[], matchId: string): Promise<void>;
     setPlayerMatch(discordId: string, matchId: string | null): Promise<void>;
     isPlayerInQueue(discordId: string, queueId: string): boolean;
     isPlayerInMatch(discordId: string): boolean;

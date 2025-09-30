@@ -6,7 +6,6 @@ const types_1 = require("../types");
 const Match_1 = require("../models/Match");
 const MatchResult_1 = require("../models/MatchResult");
 const players_1 = require("./players");
-const utils_1 = require("../utils");
 const mutex_1 = require("../utils/mutex");
 class MatchHandler {
     constructor(client, guild, match, onPlayerJoinQueue, onMatchClose) {
@@ -494,9 +493,6 @@ class MatchHandler {
         this.match.state = types_1.MatchState.CANCELLED;
         await this.updateMatch();
         await this.updateMatchMessage();
-        for (const playerId of this.match.players) {
-            await this.playerService.setPlayerMatch(playerId, null);
-        }
         if (this.channel) {
             await this.channel.send({
                 content: `❌ **Match cancelled:** ${reason}`,
@@ -559,27 +555,24 @@ class MatchHandler {
         catch (error) {
             console.error('Error deleting match channels:', error);
         }
-        // Handle autojoin for registered players in random order, we add them later so that the old channel is fully deleted first
+        // Handle autojoin for registered players as a batch, we add them later so that the old channel is fully deleted first
         if (this.queueAutojoin.size > 0) {
-            console.log(`Processing autojoin for ${this.queueAutojoin.size} players`);
-            // Add players back to queue in random order
-            const shuffledPlayers = (0, utils_1.shuffled)(Array.from(this.queueAutojoin));
-            for (const playerId of shuffledPlayers) {
-                try {
-                    // Use queue callback to handle full join logic
-                    if (this.onPlayerJoinQueue) {
-                        const success = await this.onPlayerJoinQueue(playerId, this.match.queueId);
-                        if (success) {
-                            console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId}`);
-                        }
-                        else {
-                            console.log(`Failed to auto-rejoin player ${playerId} to queue ${this.match.queueId} (validation failed)`);
-                        }
+            console.log(`Processing batch autojoin for ${this.queueAutojoin.size} players`);
+            try {
+                // Use queue callback to handle full join logic for all players at once
+                if (this.onPlayerJoinQueue) {
+                    const autojoinPlayers = Array.from(this.queueAutojoin);
+                    const success = await this.onPlayerJoinQueue(autojoinPlayers, this.match.queueId);
+                    if (success) {
+                        console.log(`Successfully processed batch autojoin for ${autojoinPlayers.length} players to queue ${this.match.queueId}`);
+                    }
+                    else {
+                        console.log(`Batch autojoin failed for players in queue ${this.match.queueId}`);
                     }
                 }
-                catch (error) {
-                    console.error(`Failed to auto-rejoin player ${playerId} to queue:`, error);
-                }
+            }
+            catch (error) {
+                console.error(`Failed to process batch autojoin for players in queue:`, error);
             }
         }
     }

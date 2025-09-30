@@ -6,6 +6,7 @@ const players_1 = require("./players");
 const matchmaking_1 = require("./matchmaking");
 const match_handler_1 = require("./match_handler");
 const mutex_1 = require("../utils/mutex");
+const utils_1 = require("../utils");
 class Queue {
     constructor(client, guild, category, config, matchmakingMutex) {
         this.channel = null;
@@ -199,7 +200,10 @@ class Queue {
             });
         }
     }
-    async addPlayerToQueueProgrammatically(playerId) {
+    async addPlayerToQueueProgrammatically(playerIds) {
+        return this.addPlayersToQueueProgrammatically(playerIds);
+    }
+    async addSinglePlayerProgrammatically(playerId) {
         try {
             // Check if player is already in a match
             if (this.playerService.isPlayerInMatch(playerId)) {
@@ -214,15 +218,36 @@ class Queue {
             // Add player to queue
             await this.playerService.addPlayerToQueue(playerId, this.config.id);
             console.log(`Player ${playerId} programmatically joined queue ${this.config.id}`);
-            // Update queue display and check for matches
-            await this.updateQueueMessage();
-            await this.checkForMatch();
             return true;
         }
         catch (error) {
             console.error(`Error adding player ${playerId} to queue programmatically:`, error);
             return false;
         }
+    }
+    async addPlayersToQueueProgrammatically(playerIds) {
+        const successful = [];
+        const failed = [];
+        // Shuffle the player order to avoid any potential bias
+        const shuffledPlayerIds = (0, utils_1.shuffled)(playerIds);
+        console.log(`Processing batch autojoin for ${shuffledPlayerIds.length} players in queue ${this.config.id}`);
+        // Add players one by one in shuffled order
+        for (const playerId of shuffledPlayerIds) {
+            const success = await this.addSinglePlayerProgrammatically(playerId);
+            if (success) {
+                successful.push(playerId);
+            }
+            else {
+                failed.push(playerId);
+            }
+        }
+        // Update queue display and check for matches only once after all additions
+        if (successful.length > 0) {
+            await this.updateQueueMessage();
+            await this.checkForMatch();
+            console.log(`Successfully added ${successful.length} players to queue ${this.config.id}, ${failed.length} failed`);
+        }
+        return { successful, failed };
     }
     async checkForMatch() {
         await this.matchmakingMutex.runExclusive(async () => {
@@ -234,10 +259,14 @@ class Queue {
             const match = await this.matchmakingService.processQueue(queueData);
             if (match) {
                 console.log(`Match created: ${match.id}`);
-                const matchHandler = new match_handler_1.MatchHandler(this.client, this.guild, match, async (playerId, queueId) => {
-                    // Callback to handle player joining queue (for autojoin)
+                // queues get notified and the match gets saved in the db in here
+                await this.playerService.onPlayersFoundMatch(match.players, match.id);
+                const matchHandler = new match_handler_1.MatchHandler(this.client, this.guild, match, async (playerIds, queueId) => {
+                    // Callback to handle players joining queue (for autojoin)
                     if (queueId === this.config.id) {
-                        return await this.addPlayerToQueueProgrammatically(playerId);
+                        const result = await this.addPlayerToQueueProgrammatically(playerIds);
+                        // Return true if any succeeded
+                        return result.successful.length > 0;
                     }
                     return false;
                 }, (matchId) => {
@@ -246,7 +275,6 @@ class Queue {
                 });
                 await matchHandler.initialize();
                 this.activeMatches.set(match.id, matchHandler);
-                await this.updateQueueMessage();
             }
         }).catch(error => {
             console.error('Error checking for match:', error);

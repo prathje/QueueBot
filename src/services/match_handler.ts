@@ -32,7 +32,7 @@ export class MatchHandler {
   private readyTimeout: NodeJS.Timeout | null = null;
   private voteTimeout: NodeJS.Timeout | null = null;
   private queueAutojoin: Set<string> = new Set();
-  private onPlayerJoinQueue: ((playerId: string, queueId: string) => Promise<boolean>) | null = null;
+  private onPlayersJoinQueue: ((playerIds: string[], queueId: string) => Promise<boolean>) | null = null;
   private onMatchClose: ((matchId: string) => void) | null = null;
   private interactionListener: ((interaction: any) => Promise<void>) | null = null;
   private playerNotificationMessages: Map<string, Message> = new Map();
@@ -44,14 +44,14 @@ export class MatchHandler {
     client: Client,
     guild: Guild,
     match: IMatch,
-    onPlayerJoinQueue?: (playerId: string, queueId: string) => Promise<boolean>,
+    onPlayersJoinQueue?: (playerIds: string[], queueId: string) => Promise<boolean>,
     onMatchClose?: (matchId: string) => void
   ) {
     this.client = client;
     this.guild = guild;
     this.match = match;
     this.playerService = PlayerService.getInstance();
-    this.onPlayerJoinQueue = onPlayerJoinQueue || null;
+    this.onPlayersJoinQueue = onPlayersJoinQueue || null;
     this.onMatchClose = onMatchClose || null;
   }
 
@@ -293,7 +293,7 @@ export class MatchHandler {
         );
     } else if (this.match.state === MatchState.COMPLETED || this.match.state === MatchState.CANCELLED) {
 
-      if (this.onPlayerJoinQueue) { // we only show autojoin if we have a callback to rejoin!
+      if (this.onPlayersJoinQueue) { // we only show autojoin if we have a callback to rejoin!
         return new ActionRowBuilder<ButtonBuilder>()
           .addComponents(
             new ButtonBuilder()
@@ -661,27 +661,23 @@ export class MatchHandler {
       console.error('Error deleting match channels:', error);
     }
 
-    // Handle autojoin for registered players in random order, we add them later so that the old channel is fully deleted first
+    // Handle autojoin for registered players as a batch, we add them later so that the old channel is fully deleted first
     if (this.queueAutojoin.size > 0) {
-      console.log(`Processing autojoin for ${this.queueAutojoin.size} players`);
+      console.log(`Processing batch autojoin for ${this.queueAutojoin.size} players`);
 
-      // Add players back to queue in random order
-      const shuffledPlayers = shuffled(Array.from(this.queueAutojoin));
-
-      for (const playerId of shuffledPlayers) {
-        try {
-          // Use queue callback to handle full join logic
-          if (this.onPlayerJoinQueue) {
-            const success = await this.onPlayerJoinQueue(playerId, this.match.queueId);
-            if (success) {
-              console.log(`Auto-rejoined player ${playerId} to queue ${this.match.queueId}`);
-            } else {
-              console.log(`Failed to auto-rejoin player ${playerId} to queue ${this.match.queueId} (validation failed)`);
-            }
+      try {
+        // Use queue callback to handle full join logic for all players at once
+        if (this.onPlayersJoinQueue) {
+          const autojoinPlayers = Array.from(this.queueAutojoin);
+          const success = await this.onPlayersJoinQueue(autojoinPlayers, this.match.queueId);
+          if (success) {
+            console.log(`Successfully processed batch autojoin for ${autojoinPlayers.length} players to queue ${this.match.queueId}`);
+          } else {
+            console.log(`Batch autojoin failed for players in queue ${this.match.queueId}`);
           }
-        } catch (error) {
-          console.error(`Failed to auto-rejoin player ${playerId} to queue:`, error);
         }
+      } catch (error) {
+        console.error(`Failed to process batch autojoin for players in queue:`, error);
       }
     }
   }

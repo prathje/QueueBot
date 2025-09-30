@@ -18,7 +18,7 @@ export declare class MatchHandler {
     private playerNotificationMessages;
     private static readonly READY_TIMEOUT;
     private static readonly VOTE_TIMEOUT;
-    constructor(client: Client, guild: Guild, match: IMatch, onPlayerJoinQueue?: (playerId: string, queueId: string) => Promise<boolean>, onMatchClose?: (matchId: string) => void);
+    constructor(client: Client, guild: Guild, match: IMatch, onPlayerJoinQueue?: (playerIds: string[], queueId: string) => Promise<boolean>, onMatchClose?: (matchId: string) => void);
     initialize(): Promise<void>;
     private saveMatch;
     private updateMatch;

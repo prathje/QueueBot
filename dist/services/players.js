@@ -108,16 +108,20 @@ class PlayerService {
             await this.notifyQueuesUpdate([queueId]);
         }
     }
-    async removePlayerFromAllQueues(discordId) {
-        const player = await this.getPlayer(discordId);
-        if (!player) {
-            throw new Error('Player not found');
+    async onPlayersFoundMatch(discordIds, matchId) {
+        // Collect all affected queues to notify after updates
+        const affectedQueues = new Set();
+        for (const discordId of discordIds) {
+            const player = await this.getPlayer(discordId);
+            if (player) {
+                player.currentQueues.forEach(queueId => affectedQueues.add(queueId));
+                player.currentQueues = [];
+                player.currentMatch = matchId;
+                await this.updatePlayer(player);
+            }
         }
-        const affectedQueues = [...player.currentQueues];
-        player.currentQueues = [];
-        await this.updatePlayer(player);
         // Notify affected queues to update their displays
-        await this.notifyQueuesUpdate(affectedQueues);
+        await this.notifyQueuesUpdate(Array.from(affectedQueues));
     }
     async setPlayerMatch(discordId, matchId) {
         const player = await this.getPlayer(discordId);

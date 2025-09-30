@@ -17,6 +17,7 @@ import { PlayerService } from './players';
 import { MatchmakingService } from './matchmaking';
 import { MatchHandler } from './match_handler';
 import { Mutex } from '../utils/mutex';
+import { shuffled } from '../utils';
 
 interface QueueConfig extends Omit<IQueue, 'players' | 'discordChannelId'> {}
 
@@ -256,7 +257,7 @@ export class Queue {
     }
   }
 
-  async addPlayerToQueueProgrammatically(playerId: string): Promise<boolean> {
+  private async addSinglePlayerProgrammatically(playerId: string): Promise<boolean> {
     try {
       // Check if player is already in a match
       if (this.playerService.isPlayerInMatch(playerId)) {
@@ -274,15 +275,40 @@ export class Queue {
       await this.playerService.addPlayerToQueue(playerId, this.config.id);
       console.log(`Player ${playerId} programmatically joined queue ${this.config.id}`);
 
-      // Update queue display and check for matches
-      await this.updateQueueMessage();
-      await this.checkForMatch();
-
       return true;
     } catch (error) {
       console.error(`Error adding player ${playerId} to queue programmatically:`, error);
       return false;
     }
+  }
+
+  private async addPlayersToQueue(playerIds: string[]): Promise<{ successful: string[], failed: string[] }> {
+    const successful: string[] = [];
+    const failed: string[] = [];
+
+    // Shuffle the player order to avoid any potential bias
+    const shuffledPlayerIds = shuffled(playerIds);
+
+    console.log(`Processing batch autojoin for ${shuffledPlayerIds.length} players in queue ${this.config.id}`);
+
+    // Add players one by one in shuffled order
+    for (const playerId of shuffledPlayerIds) {
+      const success = await this.addSinglePlayerProgrammatically(playerId);
+      if (success) {
+        successful.push(playerId);
+      } else {
+        failed.push(playerId);
+      }
+    }
+
+    // Update queue display and check for matches only once after all additions
+    if (successful.length > 0) {
+      await this.updateQueueMessage();
+      await this.checkForMatch();
+      console.log(`Successfully added ${successful.length} players to queue ${this.config.id}, ${failed.length} failed`);
+    }
+
+    return { successful, failed };
   }
 
   async checkForMatch(): Promise<void> {
@@ -305,10 +331,12 @@ export class Queue {
           this.client,
           this.guild,
           match,
-          async (playerId: string, queueId: string) => {
-            // Callback to handle player joining queue (for autojoin)
+          async (playerIds: string[], queueId: string) => {
+            // Callback to handle players joining queue (for autojoin)
             if (queueId === this.config.id) {
-              return await this.addPlayerToQueueProgrammatically(playerId);
+              const result = await this.addPlayersToQueue(playerIds);
+              // Return true if any succeeded
+              return result.successful.length > 0;
             }
             return false;
           },
