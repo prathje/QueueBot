@@ -200,9 +200,6 @@ class Queue {
             });
         }
     }
-    async addPlayerToQueueProgrammatically(playerIds) {
-        return this.addPlayersToQueueProgrammatically(playerIds);
-    }
     async addSinglePlayerProgrammatically(playerId) {
         try {
             // Check if player is already in a match
@@ -225,7 +222,7 @@ class Queue {
             return false;
         }
     }
-    async addPlayersToQueueProgrammatically(playerIds) {
+    async addPlayersToQueue(playerIds) {
         const successful = [];
         const failed = [];
         // Shuffle the player order to avoid any potential bias
@@ -264,7 +261,7 @@ class Queue {
                 const matchHandler = new match_handler_1.MatchHandler(this.client, this.guild, match, async (playerIds, queueId) => {
                     // Callback to handle players joining queue (for autojoin)
                     if (queueId === this.config.id) {
-                        const result = await this.addPlayerToQueueProgrammatically(playerIds);
+                        const result = await this.addPlayersToQueue(playerIds);
                         // Return true if any succeeded
                         return result.successful.length > 0;
                     }

@@ -28,12 +28,8 @@ export declare class Queue {
     private cleanupInteractionHandlers;
     private handleJoinQueue;
     private handleLeaveQueue;
-    addPlayerToQueueProgrammatically(playerIds: string[]): Promise<{
-        successful: string[];
-        failed: string[];
-    }>;
     private addSinglePlayerProgrammatically;
-    private addPlayersToQueueProgrammatically;
+    private addPlayersToQueue;
     checkForMatch(): Promise<void>;
     getActiveMatches(): MatchHandler[];
     removeMatch(matchId: string): void;

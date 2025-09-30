@@ -13,7 +13,7 @@ import {
   PermissionFlagsBits,
   MessageFlags
 } from 'discord.js';
-import { IMatch, MatchState } from '../types';
+import { IMatch, MatchState, TeamName, getTeamName } from '../types';
 import { Match } from '../models/Match';
 import { MatchResult } from '../models/MatchResult';
 import { PlayerService } from './players';
@@ -37,7 +37,7 @@ export class MatchHandler {
   private interactionListener: ((interaction: any) => Promise<void>) | null = null;
   private playerNotificationMessages: Map<string, Message> = new Map();
 
-  private static readonly READY_TIMEOUT = 1 * 60 * 1000; // 1 minute
+  private static readonly READY_TIMEOUT = 1 * 60 * 1000; // 1 minute (there is no penalty for being slow to ready up rn)
   private static readonly VOTE_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
 
   constructor(
@@ -149,7 +149,7 @@ export class MatchHandler {
       const baseChannelName = `Match ${this.match.id.slice(0, 8)}`;
 
       this.voiceChannel1 = await this.guild.channels.create({
-        name: `${baseChannelName} - Team 1`,
+        name: `${baseChannelName} - ${TeamName.TEAM1}`,
         type: ChannelType.GuildVoice,
         permissionOverwrites: [
           {
@@ -168,7 +168,7 @@ export class MatchHandler {
       });
 
       this.voiceChannel2 = await this.guild.channels.create({
-        name: `${baseChannelName} - Team 2`,
+        name: `${baseChannelName} - ${TeamName.TEAM2}`,
         type: ChannelType.GuildVoice,
         permissionOverwrites: [
           {
@@ -227,8 +227,8 @@ export class MatchHandler {
 
     if (this.match.state === MatchState.READY_UP) {
       embed.addFields(
-        { name: 'Team 1', value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
-        { name: 'Team 2', value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true },
+        { name: TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
+        { name: TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true },
         { name: 'Ready Players', value: `${this.match.readyPlayers.length}/${this.match.players.length}`, inline: true }
       );
     } else if (this.match.state === MatchState.IN_PROGRESS) {
@@ -237,9 +237,9 @@ export class MatchHandler {
       const cancelVotes = this.match.votes.cancel.length;
 
       embed.addFields(
-        { name: 'Team 1', value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
-        { name: 'Team 2', value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true },
-        { name: 'Votes', value: `Team 1: ${team1Votes}\nTeam 2: ${team2Votes}\nCancel: ${cancelVotes}`, inline: true }
+        { name: TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
+        { name: TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true },
+        { name: 'Votes', value: `${TeamName.TEAM1}: ${team1Votes}\n${TeamName.TEAM2}: ${team2Votes}\nCancel: ${cancelVotes}`, inline: true }
       );
     } else if (this.match.state === MatchState.COMPLETED) {
       const team1Votes = this.match.votes.team1.length;
@@ -249,16 +249,16 @@ export class MatchHandler {
       embed
         .setColor(0xFFD700)
         .addFields(
-          { name: 'Team 1', value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
-          { name: 'Team 2', value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true },
-          { name: '🏆 Result', value: `**Team ${winningTeam} Wins!**\n\nFinal Votes:\nTeam 1: ${team1Votes}\nTeam 2: ${team2Votes}`, inline: true }
+          { name: TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
+          { name: TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true },
+          { name: '🏆 Result', value: `**${getTeamName(winningTeam)} Wins!**\n\nFinal Votes:\n${TeamName.TEAM1}: ${team1Votes}\n${TeamName.TEAM2}: ${team2Votes}`, inline: true }
         );
     } else if (this.match.state === MatchState.CANCELLED) {
       embed
         .setColor(0xFF0000)
         .addFields(
-          { name: 'Team 1', value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
-          { name: 'Team 2', value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true },
+          { name: TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
+          { name: TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true },
           { name: '❌ Status', value: '**Match Cancelled**\n\nVoting is no longer available.', inline: true }
         );
     }
@@ -280,11 +280,11 @@ export class MatchHandler {
         .addComponents(
           new ButtonBuilder()
             .setCustomId(`vote_team1_${this.match.id}`)
-            .setLabel('Team 1 Wins')
+            .setLabel(`${TeamName.TEAM1} Wins`)
             .setStyle(ButtonStyle.Primary),
           new ButtonBuilder()
             .setCustomId(`vote_team2_${this.match.id}`)
-            .setLabel('Team 2 Wins')
+            .setLabel(`${TeamName.TEAM2} Wins`)
             .setStyle(ButtonStyle.Primary),
           new ButtonBuilder()
             .setCustomId(`vote_cancel_${this.match.id}`)
@@ -486,7 +486,7 @@ export class MatchHandler {
       // Add new vote
       this.match.votes[voteType].push(user.id);
 
-      const voteLabels = { team1: 'Team 1', team2: 'Team 2', cancel: 'Cancel' };
+      const voteLabels = { team1: TeamName.TEAM1, team2: TeamName.TEAM2, cancel: 'Cancel' };
 
       await interaction.reply({
         content: `You voted for ${voteLabels[voteType]}!`,
@@ -562,7 +562,7 @@ export class MatchHandler {
 
     if (this.channel) {
       await this.channel.send({
-        content: `🏆 **Match completed!** Team ${winningTeam} wins!`,
+        content: `🏆 **Match completed!** ${getTeamName(winningTeam)} wins!`,
         embeds: [new EmbedBuilder()
           .setDescription('GG! The match will be closed in 10 seconds.')
           .setColor(0xFFD700)]
@@ -824,7 +824,7 @@ export class MatchHandler {
             statusDescription = `You lost the match. Better luck next time!`;
             statusColor = 0xFF0000; // Red
           }
-          result = `Team ${matchResult.winningTeam} won`;
+          result = `${getTeamName(matchResult.winningTeam)} won`;
         } else {
           // Fallback if no match result found
           statusTitle = 'Match Completed ✅';
@@ -855,8 +855,8 @@ export class MatchHandler {
         { name: 'Match ID', value: this.match.id.slice(0, 8), inline: true},
         { name: 'Map', value: this.match.map, inline: true},
         { name: 'Result', value: result, inline: true},
-        { name: 'Team 1', value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
-        { name: 'Team 2', value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true }
+        { name: TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
+        { name: TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true }
       )
       .setColor(statusColor)
       .setTimestamp();

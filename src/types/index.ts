@@ -70,6 +70,15 @@ export enum MatchState {
   CLOSED = 'closed'
 }
 
+export enum TeamName {
+  TEAM1 = 'Red',
+  TEAM2 = 'Blue'
+}
+
+export const getTeamName = (teamNumber: 1 | 2): string => {
+  return teamNumber === 1 ? TeamName.TEAM1 : TeamName.TEAM2;
+};
+
 export interface QueueConfig {
   id: string;
   displayName: string;

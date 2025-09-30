@@ -8,7 +8,7 @@ const MatchResult_1 = require("../models/MatchResult");
 const players_1 = require("./players");
 const mutex_1 = require("../utils/mutex");
 class MatchHandler {
-    constructor(client, guild, match, onPlayerJoinQueue, onMatchClose) {
+    constructor(client, guild, match, onPlayersJoinQueue, onMatchClose) {
         this.channel = null;
         this.voiceChannel1 = null;
         this.voiceChannel2 = null;
@@ -16,7 +16,7 @@ class MatchHandler {
         this.readyTimeout = null;
         this.voteTimeout = null;
         this.queueAutojoin = new Set();
-        this.onPlayerJoinQueue = null;
+        this.onPlayersJoinQueue = null;
         this.onMatchClose = null;
         this.interactionListener = null;
         this.playerNotificationMessages = new Map();
@@ -24,7 +24,7 @@ class MatchHandler {
         this.guild = guild;
         this.match = match;
         this.playerService = players_1.PlayerService.getInstance();
-        this.onPlayerJoinQueue = onPlayerJoinQueue || null;
+        this.onPlayersJoinQueue = onPlayersJoinQueue || null;
         this.onMatchClose = onMatchClose || null;
     }
     async initialize() {
@@ -115,7 +115,7 @@ class MatchHandler {
         try {
             const baseChannelName = `Match ${this.match.id.slice(0, 8)}`;
             this.voiceChannel1 = await this.guild.channels.create({
-                name: `${baseChannelName} - Team 1`,
+                name: `${baseChannelName} - ${types_1.TeamName.TEAM1}`,
                 type: discord_js_1.ChannelType.GuildVoice,
                 permissionOverwrites: [
                     {
@@ -133,7 +133,7 @@ class MatchHandler {
                 ]
             });
             this.voiceChannel2 = await this.guild.channels.create({
-                name: `${baseChannelName} - Team 2`,
+                name: `${baseChannelName} - ${types_1.TeamName.TEAM2}`,
                 type: discord_js_1.ChannelType.GuildVoice,
                 permissionOverwrites: [
                     {
@@ -185,13 +185,13 @@ class MatchHandler {
             .setColor(0x0099FF)
             .setTimestamp();
         if (this.match.state === types_1.MatchState.READY_UP) {
-            embed.addFields({ name: 'Team 1', value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: 'Team 2', value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true }, { name: 'Ready Players', value: `${this.match.readyPlayers.length}/${this.match.players.length}`, inline: true });
+            embed.addFields({ name: types_1.TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: types_1.TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true }, { name: 'Ready Players', value: `${this.match.readyPlayers.length}/${this.match.players.length}`, inline: true });
         }
         else if (this.match.state === types_1.MatchState.IN_PROGRESS) {
             const team1Votes = this.match.votes.team1.length;
             const team2Votes = this.match.votes.team2.length;
             const cancelVotes = this.match.votes.cancel.length;
-            embed.addFields({ name: 'Team 1', value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: 'Team 2', value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true }, { name: 'Votes', value: `Team 1: ${team1Votes}\nTeam 2: ${team2Votes}\nCancel: ${cancelVotes}`, inline: true });
+            embed.addFields({ name: types_1.TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: types_1.TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true }, { name: 'Votes', value: `${types_1.TeamName.TEAM1}: ${team1Votes}\n${types_1.TeamName.TEAM2}: ${team2Votes}\nCancel: ${cancelVotes}`, inline: true });
         }
         else if (this.match.state === types_1.MatchState.COMPLETED) {
             const team1Votes = this.match.votes.team1.length;
@@ -199,12 +199,12 @@ class MatchHandler {
             const winningTeam = team1Votes > team2Votes ? 1 : 2;
             embed
                 .setColor(0xFFD700)
-                .addFields({ name: 'Team 1', value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: 'Team 2', value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true }, { name: '🏆 Result', value: `**Team ${winningTeam} Wins!**\n\nFinal Votes:\nTeam 1: ${team1Votes}\nTeam 2: ${team2Votes}`, inline: true });
+                .addFields({ name: types_1.TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: types_1.TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true }, { name: '🏆 Result', value: `**${(0, types_1.getTeamName)(winningTeam)} Wins!**\n\nFinal Votes:\n${types_1.TeamName.TEAM1}: ${team1Votes}\n${types_1.TeamName.TEAM2}: ${team2Votes}`, inline: true });
         }
         else if (this.match.state === types_1.MatchState.CANCELLED) {
             embed
                 .setColor(0xFF0000)
-                .addFields({ name: 'Team 1', value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: 'Team 2', value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true }, { name: '❌ Status', value: '**Match Cancelled**\n\nVoting is no longer available.', inline: true });
+                .addFields({ name: types_1.TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: types_1.TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true }, { name: '❌ Status', value: '**Match Cancelled**\n\nVoting is no longer available.', inline: true });
         }
         return embed;
     }
@@ -220,17 +220,17 @@ class MatchHandler {
             return new discord_js_1.ActionRowBuilder()
                 .addComponents(new discord_js_1.ButtonBuilder()
                 .setCustomId(`vote_team1_${this.match.id}`)
-                .setLabel('Team 1 Wins')
+                .setLabel(`${types_1.TeamName.TEAM1} Wins`)
                 .setStyle(discord_js_1.ButtonStyle.Primary), new discord_js_1.ButtonBuilder()
                 .setCustomId(`vote_team2_${this.match.id}`)
-                .setLabel('Team 2 Wins')
+                .setLabel(`${types_1.TeamName.TEAM2} Wins`)
                 .setStyle(discord_js_1.ButtonStyle.Primary), new discord_js_1.ButtonBuilder()
                 .setCustomId(`vote_cancel_${this.match.id}`)
                 .setLabel('Cancel Match')
                 .setStyle(discord_js_1.ButtonStyle.Danger));
         }
         else if (this.match.state === types_1.MatchState.COMPLETED || this.match.state === types_1.MatchState.CANCELLED) {
-            if (this.onPlayerJoinQueue) { // we only show autojoin if we have a callback to rejoin!
+            if (this.onPlayersJoinQueue) { // we only show autojoin if we have a callback to rejoin!
                 return new discord_js_1.ActionRowBuilder()
                     .addComponents(new discord_js_1.ButtonBuilder()
                     .setCustomId(`autojoin_queue_${this.match.id}`)
@@ -401,7 +401,7 @@ class MatchHandler {
             this.match.votes.cancel = this.match.votes.cancel.filter(id => id !== user.id);
             // Add new vote
             this.match.votes[voteType].push(user.id);
-            const voteLabels = { team1: 'Team 1', team2: 'Team 2', cancel: 'Cancel' };
+            const voteLabels = { team1: types_1.TeamName.TEAM1, team2: types_1.TeamName.TEAM2, cancel: 'Cancel' };
             await interaction.reply({
                 content: `You voted for ${voteLabels[voteType]}!`,
                 flags: discord_js_1.MessageFlags.Ephemeral
@@ -471,7 +471,7 @@ class MatchHandler {
         }
         if (this.channel) {
             await this.channel.send({
-                content: `🏆 **Match completed!** Team ${winningTeam} wins!`,
+                content: `🏆 **Match completed!** ${(0, types_1.getTeamName)(winningTeam)} wins!`,
                 embeds: [new discord_js_1.EmbedBuilder()
                         .setDescription('GG! The match will be closed in 10 seconds.')
                         .setColor(0xFFD700)]
@@ -560,9 +560,9 @@ class MatchHandler {
             console.log(`Processing batch autojoin for ${this.queueAutojoin.size} players`);
             try {
                 // Use queue callback to handle full join logic for all players at once
-                if (this.onPlayerJoinQueue) {
+                if (this.onPlayersJoinQueue) {
                     const autojoinPlayers = Array.from(this.queueAutojoin);
-                    const success = await this.onPlayerJoinQueue(autojoinPlayers, this.match.queueId);
+                    const success = await this.onPlayersJoinQueue(autojoinPlayers, this.match.queueId);
                     if (success) {
                         console.log(`Successfully processed batch autojoin for ${autojoinPlayers.length} players to queue ${this.match.queueId}`);
                     }
@@ -695,7 +695,7 @@ class MatchHandler {
                         statusDescription = `You lost the match. Better luck next time!`;
                         statusColor = 0xFF0000; // Red
                     }
-                    result = `Team ${matchResult.winningTeam} won`;
+                    result = `${(0, types_1.getTeamName)(matchResult.winningTeam)} won`;
                 }
                 else {
                     // Fallback if no match result found
@@ -725,7 +725,7 @@ class MatchHandler {
         const embed = new discord_js_1.EmbedBuilder()
             .setTitle(statusTitle)
             .setDescription(statusDescription)
-            .addFields({ name: 'Match ID', value: this.match.id.slice(0, 8), inline: true }, { name: 'Map', value: this.match.map, inline: true }, { name: 'Result', value: result, inline: true }, { name: 'Team 1', value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: 'Team 2', value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true })
+            .addFields({ name: 'Match ID', value: this.match.id.slice(0, 8), inline: true }, { name: 'Map', value: this.match.map, inline: true }, { name: 'Result', value: result, inline: true }, { name: types_1.TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: types_1.TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true })
             .setColor(statusColor)
             .setTimestamp();
         await message.edit({

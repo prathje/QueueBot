@@ -64,6 +64,11 @@ export declare enum MatchState {
     CANCELLED = "cancelled",
     CLOSED = "closed"
 }
+export declare enum TeamName {
+    TEAM1 = "Red",
+    TEAM2 = "Blue"
+}
+export declare const getTeamName: (teamNumber: 1 | 2) => string;
 export interface QueueConfig {
     id: string;
     displayName: string;
