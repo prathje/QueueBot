@@ -46,6 +46,7 @@ export declare class MatchHandler {
     forceDelete(): Promise<void>;
     private notifyPlayersOfMatchChannel;
     private cleanupPlayerNotifications;
+    private updatePlayerNotificationWithStatus;
     static cleanupMatchChannels(guild: Guild, match: {
         matchId: string;
         discordChannelId: string | null;

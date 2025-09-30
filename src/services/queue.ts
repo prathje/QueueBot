@@ -401,7 +401,6 @@ export class Queue {
       for (const matchHandler of matchHandlers) {
         try {
           await matchHandler.forceCancel('Queue shutdown - bot is restarting');
-          await matchHandler.forceDelete();
           this.removeMatch(matchHandler.getId());
         } catch (error) {
           console.error(`Error cancelling match ${matchHandler.getId()}:`, error);

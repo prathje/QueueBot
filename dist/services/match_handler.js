@@ -706,17 +706,77 @@ class MatchHandler {
         if (this.playerNotificationMessages.size === 0) {
             return;
         }
-        console.log(`Cleaning up ${this.playerNotificationMessages.size} player notification messages`);
+        console.log(`Updating ${this.playerNotificationMessages.size} player notification messages with match status`);
         for (const [playerId, message] of this.playerNotificationMessages) {
             try {
-                await message.delete();
-                console.log(`Deleted notification message for player ${playerId}`);
+                await this.updatePlayerNotificationWithStatus(playerId, message);
+                console.log(`Updated notification message for player ${playerId} with match status`);
             }
             catch (error) {
-                console.log(`Could not delete notification message for player ${playerId}:`, error instanceof Error ? error.message : String(error));
+                console.log(`Could not update notification message for player ${playerId}:`, error instanceof Error ? error.message : String(error));
             }
         }
         this.playerNotificationMessages.clear();
+    }
+    async updatePlayerNotificationWithStatus(playerId, message) {
+        const user = await this.client.users.fetch(playerId);
+        let statusTitle;
+        let statusDescription;
+        let statusColor;
+        let finalScore = 'N/A';
+        if (this.match.state === types_1.MatchState.COMPLETED) {
+            // Try to get the match result to determine the winner
+            try {
+                const matchResult = await MatchResult_1.MatchResult.findOne({ matchId: this.match.id });
+                if (matchResult) {
+                    const winnerTeam = matchResult.winningTeam === 1 ? this.match.teams.team1 : this.match.teams.team2;
+                    const isWinner = winnerTeam.includes(playerId);
+                    if (isWinner) {
+                        statusTitle = '🎉 Match Won!';
+                        statusDescription = `Congratulations! You won the match on ${this.match.map}!`;
+                        statusColor = 0x00FF00; // Green
+                    }
+                    else {
+                        statusTitle = '😞 Match Lost';
+                        statusDescription = `You lost the match on ${this.match.map}. Better luck next time!`;
+                        statusColor = 0xFF0000; // Red
+                    }
+                    finalScore = `Team ${matchResult.winningTeam} won`;
+                }
+                else {
+                    // Fallback if no match result found
+                    statusTitle = '✅ Match Completed';
+                    statusDescription = `Your match on ${this.match.map} has been completed.`;
+                    statusColor = 0x0099FF; // Blue
+                }
+            }
+            catch (error) {
+                console.log(`Could not fetch match result for ${this.match.id}:`, error);
+                statusTitle = '✅ Match Completed';
+                statusDescription = `Your match on ${this.match.map} has been completed.`;
+                statusColor = 0x0099FF; // Blue
+            }
+        }
+        else if (this.match.state === types_1.MatchState.CANCELLED) {
+            statusTitle = '❌ Match Cancelled';
+            statusDescription = `Your match on ${this.match.map} was cancelled. You can join new queues now.`;
+            statusColor = 0xFFA500; // Orange
+        }
+        else {
+            statusTitle = '🔚 Match Ended';
+            statusDescription = `Your match on ${this.match.map} has ended.`;
+            statusColor = 0x808080; // Gray
+        }
+        const embed = new discord_js_1.EmbedBuilder()
+            .setTitle(statusTitle)
+            .setDescription(statusDescription)
+            .addFields({ name: 'Match ID', value: this.match.id.slice(0, 8), inline: true }, { name: 'Map', value: this.match.map, inline: true }, { name: 'Result', value: finalScore, inline: true })
+            .setColor(statusColor)
+            .setTimestamp();
+        await message.edit({
+            content: `**Match Update:**`,
+            embeds: [embed]
+        });
     }
     static async cleanupMatchChannels(guild, match) {
         let deletedChannels = 0;
