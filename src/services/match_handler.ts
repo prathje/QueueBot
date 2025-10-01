@@ -653,7 +653,7 @@ export class MatchHandler {
           }
 
           return {
-            id: index,
+            // id: index, // Not available - commented out
             team: team,
             name: username,
             discord_id: playerId,
