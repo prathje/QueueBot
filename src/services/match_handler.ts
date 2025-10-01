@@ -121,7 +121,7 @@ export class MatchHandler {
         permissionOverwrites: [
           {
             id: this.guild.roles.everyone.id,
-            deny: [PermissionFlagsBits.ViewChannel]
+            deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
           },
           {
             id: this.client.user!.id,
@@ -156,7 +156,7 @@ export class MatchHandler {
         permissionOverwrites: [
           {
             id: this.guild.roles.everyone.id,
-            deny: [PermissionFlagsBits.ViewChannel]
+            deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
           },
           {
             id: this.client.user!.id,
@@ -175,7 +175,7 @@ export class MatchHandler {
         permissionOverwrites: [
           {
             id: this.guild.roles.everyone.id,
-            deny: [PermissionFlagsBits.ViewChannel]
+            deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
           },
           {
             id: this.client.user!.id,
