@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MessageUpdater = void 0;
 class MessageUpdater {
-    constructor(message, delay = 1000) {
+    constructor(message, delay = 750) {
         this.pendingUpdate = null;
         this.updateTimeout = null;
         this.message = message;
@@ -24,7 +24,7 @@ class MessageUpdater {
         if (!this.pendingUpdate)
             return;
         const updateOptions = this.pendingUpdate;
-        this.pendingUpdate = null;
+        this.pendingUpdate = null; // prevent re-entrancy
         this.updateTimeout = null;
         try {
             await this.message.edit(updateOptions);

@@ -1,8 +1,9 @@
-import { Client, Guild } from 'discord.js';
+import { Client, Guild, CategoryChannel } from 'discord.js';
 import { IMatch, MatchState } from '../types';
 export declare class MatchHandler {
     private client;
     private guild;
+    private category;
     private match;
     private channel;
     private voiceChannel1;
@@ -19,7 +20,7 @@ export declare class MatchHandler {
     private playerNotificationMessages;
     private static readonly READY_TIMEOUT;
     private static readonly VOTE_TIMEOUT;
-    constructor(client: Client, guild: Guild, match: IMatch, onPlayersJoinQueue?: (playerIds: string[], queueId: string) => Promise<boolean>, onMatchClose?: (matchId: string) => void);
+    constructor(client: Client, guild: Guild, category: CategoryChannel, match: IMatch, onPlayersJoinQueue?: (playerIds: string[], queueId: string) => Promise<boolean>, onMatchClose?: (matchId: string) => void);
     initialize(): Promise<void>;
     private saveMatch;
     private updateMatch;

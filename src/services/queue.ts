@@ -387,6 +387,7 @@ export class Queue {
         const matchHandler = new MatchHandler(
           this.client,
           this.guild,
+          this.category,
           match,
           async (playerIds: string[], queueId: string) => {
             // Callback to handle players joining queue (for autojoin)

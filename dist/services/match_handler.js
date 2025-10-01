@@ -10,7 +10,7 @@ const mutex_1 = require("../utils/mutex");
 const message_updater_1 = require("../utils/message_updater");
 const environment_1 = require("../config/environment");
 class MatchHandler {
-    constructor(client, guild, match, onPlayersJoinQueue, onMatchClose) {
+    constructor(client, guild, category, match, onPlayersJoinQueue, onMatchClose) {
         this.channel = null;
         this.voiceChannel1 = null;
         this.voiceChannel2 = null;
@@ -25,6 +25,7 @@ class MatchHandler {
         this.playerNotificationMessages = new Map();
         this.client = client;
         this.guild = guild;
+        this.category = category;
         this.match = match;
         this.playerService = players_1.PlayerService.getInstance();
         this.onPlayersJoinQueue = onPlayersJoinQueue || null;
@@ -88,10 +89,11 @@ class MatchHandler {
             this.channel = await this.guild.channels.create({
                 name: channelName,
                 type: discord_js_1.ChannelType.GuildText,
+                parent: this.category,
                 permissionOverwrites: [
                     {
                         id: this.guild.roles.everyone.id,
-                        deny: [discord_js_1.PermissionFlagsBits.ViewChannel]
+                        deny: [discord_js_1.PermissionFlagsBits.ViewChannel, discord_js_1.PermissionFlagsBits.Connect]
                     },
                     {
                         id: this.client.user.id,
@@ -119,10 +121,11 @@ class MatchHandler {
             this.voiceChannel1 = await this.guild.channels.create({
                 name: `${baseChannelName} - ${types_1.TeamName.TEAM1}`,
                 type: discord_js_1.ChannelType.GuildVoice,
+                parent: this.category,
                 permissionOverwrites: [
                     {
                         id: this.guild.roles.everyone.id,
-                        deny: [discord_js_1.PermissionFlagsBits.ViewChannel]
+                        deny: [discord_js_1.PermissionFlagsBits.ViewChannel, discord_js_1.PermissionFlagsBits.Connect]
                     },
                     {
                         id: this.client.user.id,
@@ -137,10 +140,11 @@ class MatchHandler {
             this.voiceChannel2 = await this.guild.channels.create({
                 name: `${baseChannelName} - ${types_1.TeamName.TEAM2}`,
                 type: discord_js_1.ChannelType.GuildVoice,
+                parent: this.category,
                 permissionOverwrites: [
                     {
                         id: this.guild.roles.everyone.id,
-                        deny: [discord_js_1.PermissionFlagsBits.ViewChannel]
+                        deny: [discord_js_1.PermissionFlagsBits.ViewChannel, discord_js_1.PermissionFlagsBits.Connect]
                     },
                     {
                         id: this.client.user.id,
@@ -349,7 +353,7 @@ class MatchHandler {
     async startReadyPhase() {
         this.match.state = types_1.MatchState.READY_UP;
         await this.updateMatch();
-        await this.updateMatchMessage();
+        await this.updateMatchMessage(); // create the message
         this.readyTimeout = setTimeout(async () => {
             await this.cancelMatch('Ready timeout exceeded');
         }, MatchHandler.READY_TIMEOUT);
@@ -709,7 +713,7 @@ class MatchHandler {
                 this.messageUpdater.update(messageOptions);
             }
             else {
-                // First message creation
+                // First message creation, this executes when the match is created
                 this.matchMessage = await this.channel.send(messageOptions);
                 this.messageUpdater = new message_updater_1.MessageUpdater(this.matchMessage);
             }

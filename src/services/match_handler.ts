@@ -1,6 +1,7 @@
 import {
   Client,
   Guild,
+  CategoryChannel,
   TextChannel,
   VoiceChannel,
   ChannelType,
@@ -25,6 +26,7 @@ import { config } from '../config/environment';
 export class MatchHandler {
   private client: Client;
   private guild: Guild;
+  private category: CategoryChannel;
   private match: IMatch;
   private channel: TextChannel | null = null;
   private voiceChannel1: VoiceChannel | null = null;
@@ -46,12 +48,14 @@ export class MatchHandler {
   constructor(
     client: Client,
     guild: Guild,
+    category: CategoryChannel,
     match: IMatch,
     onPlayersJoinQueue?: (playerIds: string[], queueId: string) => Promise<boolean>,
     onMatchClose?: (matchId: string) => void
   ) {
     this.client = client;
     this.guild = guild;
+    this.category = category;
     this.match = match;
     this.playerService = PlayerService.getInstance();
     this.onPlayersJoinQueue = onPlayersJoinQueue || null;
@@ -118,6 +122,7 @@ export class MatchHandler {
       this.channel = await this.guild.channels.create({
         name: channelName,
         type: ChannelType.GuildText,
+        parent: this.category,
         permissionOverwrites: [
           {
             id: this.guild.roles.everyone.id,
@@ -153,6 +158,7 @@ export class MatchHandler {
       this.voiceChannel1 = await this.guild.channels.create({
         name: `${baseChannelName} - ${TeamName.TEAM1}`,
         type: ChannelType.GuildVoice,
+        parent: this.category,
         permissionOverwrites: [
           {
             id: this.guild.roles.everyone.id,
@@ -172,6 +178,7 @@ export class MatchHandler {
       this.voiceChannel2 = await this.guild.channels.create({
         name: `${baseChannelName} - ${TeamName.TEAM2}`,
         type: ChannelType.GuildVoice,
+        parent: this.category,
         permissionOverwrites: [
           {
             id: this.guild.roles.everyone.id,

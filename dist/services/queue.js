@@ -306,7 +306,7 @@ class Queue {
                 console.log(`Match created: ${match.id}`);
                 // queues get notified and the match gets saved in the db in here
                 await this.playerService.onPlayersFoundMatch(match.players, match.id);
-                const matchHandler = new match_handler_1.MatchHandler(this.client, this.guild, match, async (playerIds, queueId) => {
+                const matchHandler = new match_handler_1.MatchHandler(this.client, this.guild, this.category, match, async (playerIds, queueId) => {
                     // Callback to handle players joining queue (for autojoin)
                     if (queueId === this.config.id) {
                         const result = await this.addPlayersToQueue(playerIds);
