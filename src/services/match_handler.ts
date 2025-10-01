@@ -42,7 +42,7 @@ export class MatchHandler {
   private interactionListener: ((interaction: any) => Promise<void>) | null = null;
   private playerNotificationMessages: Map<string, Message> = new Map();
 
-  private static readonly READY_TIMEOUT = 1 * 60 * 1000; // 1 minute (there is no penalty for being slow to ready up rn)
+  private static readonly READY_TIMEOUT = 3 * 60 * 1000; // 3 minutes (there is no penalty for being slow to ready up rn)
   private static readonly VOTE_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
 
   constructor(
