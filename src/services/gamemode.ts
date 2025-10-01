@@ -49,19 +49,27 @@ export class Gamemode {
       throw new Error('Category must be created before initializing queues');
     }
 
-    for (const queueConfig of this.config.queues) {
+    const queuePromises = this.config.queues.map(async (queueConfig) => {
       try {
-        const queue = new Queue(this.client, this.guild, this.category, {
+        const queue = new Queue(this.client, this.guild, this.category!, {
           ...queueConfig,
           gamemodeId: this.config.id
         }, this.matchmakingMutex);
         await queue.initialize();
         this.queues.set(queueConfig.id, queue);
         console.log(`Initialized queue: ${queueConfig.displayName}`);
+        return { success: true, queueId: queueConfig.id };
       } catch (error) {
         console.error(`Error initializing queue ${queueConfig.id}:`, error);
+        return { success: false, queueId: queueConfig.id, error };
       }
-    }
+    });
+
+    const results = await Promise.all(queuePromises);
+    const successful = results.filter(r => r.success).length;
+    const failed = results.filter(r => !r.success).length;
+
+    console.log(`Queue initialization complete: ${successful} successful, ${failed} failed`);
   }
 
   getQueue(queueId: string): Queue | undefined {
@@ -96,9 +104,8 @@ export class Gamemode {
   async shutdown(): Promise<void> {
     console.log(`Shutting down gamemode: ${this.config.displayName}`);
 
-    for (const queue of this.queues.values()) {
-      await queue.shutdown();
-    }
+    const shutdownPromises = Array.from(this.queues.values()).map(queue => queue.shutdown());
+    await Promise.all(shutdownPromises);
 
     console.log(`Gamemode ${this.config.displayName} shutdown complete`);
   }
