@@ -17,6 +17,7 @@ import { PlayerService } from './players';
 import { MatchmakingService } from './matchmaking';
 import { MatchHandler } from './match_handler';
 import { Mutex } from '../utils/mutex';
+import { MessageUpdater } from '../utils/message_updater';
 import { shuffled } from '../utils';
 
 interface QueueConfig extends Omit<IQueue, 'players' | 'discordChannelId'> {}
@@ -28,6 +29,7 @@ export class Queue {
   private config: QueueConfig;
   private channel: TextChannel | null = null;
   private queueMessage: Message | null = null;
+  private messageUpdater: MessageUpdater | null = null;
   private playerService: PlayerService;
   private matchmakingService: MatchmakingService;
   private activeMatches: Map<string, MatchHandler> = new Map();
@@ -91,6 +93,7 @@ export class Queue {
 
       if (existingMessage) {
         this.queueMessage = existingMessage;
+        this.messageUpdater = new MessageUpdater(existingMessage);
         await this.updateQueueMessage();
       } else {
         await this.createQueueMessage();
@@ -111,26 +114,22 @@ export class Queue {
         embeds: [embed],
         components: [row]
       });
+      this.messageUpdater = new MessageUpdater(this.queueMessage);
     } catch (error) {
       console.error(`Error creating queue message for ${this.config.id}:`, error);
     }
   }
 
   private async updateQueueMessage(): Promise<void> {
-
-    if (!this.queueMessage) return;
+    if (!this.messageUpdater) return;
 
     const embed = this.createQueueEmbed();
     const row = this.createQueueButtons();
 
-    try {
-      await this.queueMessage.edit({
-        embeds: [embed],
-        components: [row]
-      });
-    } catch (error) {
-      console.error(`Error updating queue message for ${this.config.id}:`, error);
-    }
+    this.messageUpdater.update({
+      embeds: [embed],
+      components: [row]
+    });
   }
 
   private createQueueEmbed(): EmbedBuilder {
@@ -468,6 +467,12 @@ export class Queue {
 
       // Clean up event listeners
       this.cleanupInteractionHandlers();
+
+      // Clean up message updater
+      if (this.messageUpdater) {
+        this.messageUpdater.destroy();
+        this.messageUpdater = null;
+      }
 
       // Cancel all active matches in this queue
       await this.cancelActiveMatches();

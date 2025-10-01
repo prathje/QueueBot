@@ -6,11 +6,13 @@ const players_1 = require("./players");
 const matchmaking_1 = require("./matchmaking");
 const match_handler_1 = require("./match_handler");
 const mutex_1 = require("../utils/mutex");
+const message_updater_1 = require("../utils/message_updater");
 const utils_1 = require("../utils");
 class Queue {
     constructor(client, guild, category, config, matchmakingMutex) {
         this.channel = null;
         this.queueMessage = null;
+        this.messageUpdater = null;
         this.activeMatches = new Map();
         this.interactionListener = null;
         this.disabled = false;
@@ -59,6 +61,7 @@ class Queue {
                 msg.embeds[0].title?.includes('Queue'));
             if (existingMessage) {
                 this.queueMessage = existingMessage;
+                this.messageUpdater = new message_updater_1.MessageUpdater(existingMessage);
                 await this.updateQueueMessage();
             }
             else {
@@ -79,25 +82,21 @@ class Queue {
                 embeds: [embed],
                 components: [row]
             });
+            this.messageUpdater = new message_updater_1.MessageUpdater(this.queueMessage);
         }
         catch (error) {
             console.error(`Error creating queue message for ${this.config.id}:`, error);
         }
     }
     async updateQueueMessage() {
-        if (!this.queueMessage)
+        if (!this.messageUpdater)
             return;
         const embed = this.createQueueEmbed();
         const row = this.createQueueButtons();
-        try {
-            await this.queueMessage.edit({
-                embeds: [embed],
-                components: [row]
-            });
-        }
-        catch (error) {
-            console.error(`Error updating queue message for ${this.config.id}:`, error);
-        }
+        this.messageUpdater.update({
+            embeds: [embed],
+            components: [row]
+        });
     }
     createQueueEmbed() {
         const playersInQueue = this.playerService.getPlayersInQueue(this.config.id);
@@ -133,7 +132,7 @@ class Queue {
             .setLabel('🔄 Refresh')
             .setStyle(discord_js_1.ButtonStyle.Secondary);
         return new discord_js_1.ActionRowBuilder()
-            .addComponents(joinButton, leaveButton, refreshButton);
+            .addComponents(joinButton, leaveButton /*, refreshButton */);
     }
     setupInteractionHandlers() {
         const m = new mutex_1.Mutex();
@@ -231,7 +230,7 @@ class Queue {
     async handleRefreshQueue(interaction) {
         try {
             await interaction.reply({
-                content: '🔄 Queue refreshed!',
+                content: '🔄 Refreshed!',
                 flags: discord_js_1.MessageFlags.Ephemeral
             });
             await this.updateQueueMessage();
@@ -370,6 +369,11 @@ class Queue {
             this.playerService.unregisterQueueUpdateCallback(this.config.id);
             // Clean up event listeners
             this.cleanupInteractionHandlers();
+            // Clean up message updater
+            if (this.messageUpdater) {
+                this.messageUpdater.destroy();
+                this.messageUpdater = null;
+            }
             // Cancel all active matches in this queue
             await this.cancelActiveMatches();
             if (this.queueMessage) {

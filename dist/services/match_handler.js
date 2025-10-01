@@ -7,6 +7,7 @@ const Match_1 = require("../models/Match");
 const MatchResult_1 = require("../models/MatchResult");
 const players_1 = require("./players");
 const mutex_1 = require("../utils/mutex");
+const message_updater_1 = require("../utils/message_updater");
 const environment_1 = require("../config/environment");
 class MatchHandler {
     constructor(client, guild, match, onPlayersJoinQueue, onMatchClose) {
@@ -14,6 +15,7 @@ class MatchHandler {
         this.voiceChannel1 = null;
         this.voiceChannel2 = null;
         this.matchMessage = null;
+        this.messageUpdater = null;
         this.readyTimeout = null;
         this.voteTimeout = null;
         this.queueAutojoin = new Set();
@@ -215,15 +217,16 @@ class MatchHandler {
         return embed;
     }
     createMatchButtons() {
+        const refreshButton = new discord_js_1.ButtonBuilder()
+            .setCustomId(`refresh_match_${this.match.id}`)
+            .setLabel('🔄 Refresh')
+            .setStyle(discord_js_1.ButtonStyle.Secondary);
         if (this.match.state === types_1.MatchState.READY_UP) {
             return new discord_js_1.ActionRowBuilder()
                 .addComponents(new discord_js_1.ButtonBuilder()
                 .setCustomId(`ready_${this.match.id}`)
                 .setLabel('Ready Up!')
-                .setStyle(discord_js_1.ButtonStyle.Success), new discord_js_1.ButtonBuilder()
-                .setCustomId(`refresh_match_${this.match.id}`)
-                .setLabel('🔄 Refresh')
-                .setStyle(discord_js_1.ButtonStyle.Secondary));
+                .setStyle(discord_js_1.ButtonStyle.Success), refreshButton);
         }
         else if (this.match.state === types_1.MatchState.IN_PROGRESS) {
             const row1 = new discord_js_1.ActionRowBuilder()
@@ -238,10 +241,7 @@ class MatchHandler {
                 .setLabel('Cancel Match')
                 .setStyle(discord_js_1.ButtonStyle.Secondary));
             const row2 = new discord_js_1.ActionRowBuilder()
-                .addComponents(new discord_js_1.ButtonBuilder()
-                .setCustomId(`refresh_match_${this.match.id}`)
-                .setLabel('🔄 Refresh')
-                .setStyle(discord_js_1.ButtonStyle.Secondary));
+                .addComponents(refreshButton);
             return [row1, row2]; // Return multiple rows for voting phase
         }
         else if (this.match.state === types_1.MatchState.COMPLETED || this.match.state === types_1.MatchState.CANCELLED) {
@@ -250,17 +250,11 @@ class MatchHandler {
                     .addComponents(new discord_js_1.ButtonBuilder()
                     .setCustomId(`autojoin_queue_${this.match.id}`)
                     .setLabel('🔄 Auto-join Next Queue')
-                    .setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder()
-                    .setCustomId(`refresh_match_${this.match.id}`)
-                    .setLabel('🔄 Refresh')
-                    .setStyle(discord_js_1.ButtonStyle.Secondary));
+                    .setStyle(discord_js_1.ButtonStyle.Secondary), refreshButton);
             }
             else {
                 return new discord_js_1.ActionRowBuilder()
-                    .addComponents(new discord_js_1.ButtonBuilder()
-                    .setCustomId(`refresh_match_${this.match.id}`)
-                    .setLabel('🔄 Refresh')
-                    .setStyle(discord_js_1.ButtonStyle.Secondary));
+                    .addComponents(refreshButton);
             }
         }
         return null;
@@ -287,7 +281,7 @@ class MatchHandler {
                 await m.runExclusive(() => this.handleAutojoinRegistration(interaction));
             }
             else if (customId === `refresh_match_${this.match.id}`) {
-                await this.handleRefreshMatch(interaction);
+                await m.runExclusive(() => this.handleRefreshMatch(interaction));
             }
         };
         this.client.on('interactionCreate', this.interactionListener);
@@ -338,11 +332,11 @@ class MatchHandler {
     }
     async handleRefreshMatch(interaction) {
         try {
+            await this.updateMatchMessage();
             await interaction.reply({
-                content: '🔄 Match refreshed!',
+                content: '🔄 Refreshed!',
                 flags: discord_js_1.MessageFlags.Ephemeral
             });
-            await this.updateMatchMessage();
         }
         catch (error) {
             console.error('Error handling match refresh:', error);
@@ -633,6 +627,11 @@ class MatchHandler {
         await this.updateMatch();
         // Clean up event listeners first
         this.cleanupInteractionHandlers();
+        // Clean up message updater
+        if (this.messageUpdater) {
+            this.messageUpdater.destroy();
+            this.messageUpdater = null;
+        }
         for (const playerId of this.match.players) {
             await this.playerService.setPlayerMatch(playerId, null);
         }
@@ -688,28 +687,31 @@ class MatchHandler {
             return;
         const embed = this.createMatchEmbed();
         const buttons = this.createMatchButtons();
+        const messageOptions = {
+            content: `Match found! <@${this.match.players.join('> <@')}>`,
+            embeds: [embed]
+        };
+        if (buttons) {
+            // Handle both single row and multiple rows
+            if (Array.isArray(buttons)) {
+                messageOptions.components = buttons;
+            }
+            else {
+                messageOptions.components = [buttons];
+            }
+        }
+        else {
+            messageOptions.components = [];
+        }
         try {
-            const messageOptions = {
-                content: `Match found! <@${this.match.players.join('> <@')}>`,
-                embeds: [embed]
-            };
-            if (buttons) {
-                // Handle both single row and multiple rows
-                if (Array.isArray(buttons)) {
-                    messageOptions.components = buttons;
-                }
-                else {
-                    messageOptions.components = [buttons];
-                }
+            if (this.messageUpdater) {
+                // Use debounced update
+                this.messageUpdater.update(messageOptions);
             }
             else {
-                messageOptions.components = [];
-            }
-            if (this.matchMessage) {
-                await this.matchMessage.edit(messageOptions);
-            }
-            else {
+                // First message creation
                 this.matchMessage = await this.channel.send(messageOptions);
+                this.messageUpdater = new message_updater_1.MessageUpdater(this.matchMessage);
             }
         }
         catch (error) {

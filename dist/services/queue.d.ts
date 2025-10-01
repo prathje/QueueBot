@@ -11,6 +11,7 @@ export declare class Queue {
     private config;
     private channel;
     private queueMessage;
+    private messageUpdater;
     private playerService;
     private matchmakingService;
     private activeMatches;

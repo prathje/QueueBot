@@ -19,6 +19,7 @@ import { MatchResult } from '../models/MatchResult';
 import { PlayerService } from './players';
 import { shuffled } from '../utils';
 import { Mutex } from '../utils/mutex';
+import { MessageUpdater } from '../utils/message_updater';
 import { config } from '../config/environment';
 
 export class MatchHandler {
@@ -29,6 +30,7 @@ export class MatchHandler {
   private voiceChannel1: VoiceChannel | null = null;
   private voiceChannel2: VoiceChannel | null = null;
   private matchMessage: Message | null = null;
+  private messageUpdater: MessageUpdater | null = null;
   private playerService: PlayerService;
   private readyTimeout: NodeJS.Timeout | null = null;
   private voteTimeout: NodeJS.Timeout | null = null;
@@ -427,7 +429,7 @@ export class MatchHandler {
   private async startReadyPhase(): Promise<void> {
     this.match.state = MatchState.READY_UP;
     await this.updateMatch();
-    await this.updateMatchMessage();
+    await this.updateMatchMessage(); // create the message
 
     this.readyTimeout = setTimeout(async () => {
       await this.cancelMatch('Ready timeout exceeded');
@@ -745,6 +747,12 @@ export class MatchHandler {
     // Clean up event listeners first
     this.cleanupInteractionHandlers();
 
+    // Clean up message updater
+    if (this.messageUpdater) {
+      this.messageUpdater.destroy();
+      this.messageUpdater = null;
+    }
+
     for (const playerId of this.match.players) {
       await this.playerService.setPlayerMatch(playerId, null);
     }
@@ -803,27 +811,30 @@ export class MatchHandler {
     const embed = this.createMatchEmbed();
     const buttons = this.createMatchButtons();
 
-    try {
-      const messageOptions: any = {
-        content: `Match found! <@${this.match.players.join('> <@')}>`,
-        embeds: [embed]
-      };
+    const messageOptions: any = {
+      content: `Match found! <@${this.match.players.join('> <@')}>`,
+      embeds: [embed]
+    };
 
-      if (buttons) {
-        // Handle both single row and multiple rows
-        if (Array.isArray(buttons)) {
-          messageOptions.components = buttons;
-        } else {
-          messageOptions.components = [buttons];
-        }
+    if (buttons) {
+      // Handle both single row and multiple rows
+      if (Array.isArray(buttons)) {
+        messageOptions.components = buttons;
       } else {
-        messageOptions.components = [];
+        messageOptions.components = [buttons];
       }
+    } else {
+      messageOptions.components = [];
+    }
 
-      if (this.matchMessage) {
-        await this.matchMessage.edit(messageOptions);
+    try {
+      if (this.messageUpdater) {
+        // Use debounced update
+        this.messageUpdater.update(messageOptions);
       } else {
+        // First message creation, this executes when the match is created
         this.matchMessage = await this.channel.send(messageOptions);
+        this.messageUpdater = new MessageUpdater(this.matchMessage);
       }
     } catch (error) {
       console.error('Error updating match message:', error);

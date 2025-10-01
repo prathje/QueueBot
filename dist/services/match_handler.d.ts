@@ -8,6 +8,7 @@ export declare class MatchHandler {
     private voiceChannel1;
     private voiceChannel2;
     private matchMessage;
+    private messageUpdater;
     private playerService;
     private readyTimeout;
     private voteTimeout;
