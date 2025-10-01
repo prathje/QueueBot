@@ -39,6 +39,7 @@ export class MatchmakingService {
         cancel: []
       },
       createdAt: new Date(),
+      startedAt: null,
       updatedAt: new Date()
     };
 

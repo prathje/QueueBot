@@ -44,13 +44,14 @@ export interface IMatch {
     cancel: string[];
   };
   createdAt: Date;
+  startedAt: Date | null;
   updatedAt: Date;
 }
 
 export interface IMatchResult {
   matchId: string;
-  queueId: string;
   gamemodeId: string;
+  queueId: string;
   winningTeam: 1 | 2;
   map: string;
   teams: {
@@ -58,6 +59,8 @@ export interface IMatchResult {
     team2: string[];
   };
   players: string[];
+  displayNames: { [discordId: string]: string };
+  startedAt: Date;
   completedAt: Date;
 }
 

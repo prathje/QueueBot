@@ -28,7 +28,8 @@ const MatchSchema = new Schema<IMatchDocument>({
     team1: [{ type: String, default: [] }],
     team2: [{ type: String, default: [] }],
     cancel: [{ type: String, default: [] }]
-  }
+  },
+  startedAt: { type: Date, default: null }
 }, {
   timestamps: true
 });

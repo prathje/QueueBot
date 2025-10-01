@@ -14,7 +14,7 @@ import {
   PermissionFlagsBits,
   MessageFlags
 } from 'discord.js';
-import { IMatch, MatchState, TeamName, getTeamName } from '../types';
+import {IMatch, MatchState, TeamName, getTeamName, IMatchResult} from '../types';
 import { Match } from '../models/Match';
 import { MatchResult } from '../models/MatchResult';
 import { PlayerService } from './players';
@@ -57,6 +57,7 @@ export class MatchHandler {
     this.guild = guild;
     this.category = category;
     this.match = match;
+    this.match.startedAt = null; // Initialize as null
     this.playerService = PlayerService.getInstance();
     this.onPlayersJoinQueue = onPlayersJoinQueue || null;
     this.onMatchClose = onMatchClose || null;
@@ -86,7 +87,8 @@ export class MatchHandler {
         discordVoiceChannel1Id: this.match.discordVoiceChannel1Id,
         discordVoiceChannel2Id: this.match.discordVoiceChannel2Id,
         readyPlayers: this.match.readyPlayers,
-        votes: this.match.votes
+        votes: this.match.votes,
+        startedAt: this.match.startedAt
       });
       await matchDoc.save();
     } catch (error) {
@@ -108,7 +110,8 @@ export class MatchHandler {
         discordVoiceChannel1Id: this.match.discordVoiceChannel1Id,
         discordVoiceChannel2Id: this.match.discordVoiceChannel2Id,
         readyPlayers: this.match.readyPlayers,
-        votes: this.match.votes
+        votes: this.match.votes,
+        startedAt: this.match.startedAt
       });
     } catch (error) {
       console.error('Error updating match:', error);
@@ -493,6 +496,7 @@ export class MatchHandler {
     }
 
     this.match.state = MatchState.IN_PROGRESS;
+    this.match.startedAt = new Date();
     await this.updateMatch();
     await this.updateMatchMessage();
 
@@ -593,6 +597,18 @@ export class MatchHandler {
     await this.updateMatch();
     await this.updateMatchMessage();
 
+    // Collect display names for the MatchResult
+    const displayNames: { [discordId: string]: string } = {};
+    for (const playerId of this.match.players) {
+      try {
+        const user = await this.client.users.fetch(playerId);
+        displayNames[playerId] = user.username;
+      } catch (error) {
+        console.warn(`Could not fetch username for user ${playerId}:`, error);
+        displayNames[playerId] = playerId; // Fallback to Discord ID
+      }
+    }
+
     const matchResult = new MatchResult({
       matchId: this.match.id,
       queueId: this.match.queueId,
@@ -604,6 +620,8 @@ export class MatchHandler {
         team2: this.match.teams.team2
       },
       players: this.match.players,
+      displayNames,
+      startedAt: this.match.startedAt || new Date(), // Fallback to current time if somehow null
       completedAt: new Date()
     });
 
@@ -624,72 +642,61 @@ export class MatchHandler {
     }
 
     // Post match data to webhook
-    await this.postMatchToWebhook(winningTeam);
+    await this.postMatchResultToWebhook(matchResult);
 
     setTimeout(async () => {
       await this.closeMatch();
     }, 10000);
   }
 
-  private async postMatchToWebhook(winningTeam: 1 | 2): Promise<void> {
+  private async postMatchResultToWebhook(matchResult: any): Promise<void> {
     if (!config.api.resultsWebhookUrl) {
       console.log('No RESULTS_WEBHOOK_URL configured, skipping match posting');
       return;
     }
 
     try {
-      // Fetch Discord usernames for all players
-      const playersWithNames = await Promise.all(
-        this.match.players.map(async (playerId, index) => {
-          const isTeam1 = this.match.teams.team1.includes(playerId);
-          const team = isTeam1 ? "red" : "blue";
+      console.log('Raw webhook URL from config:', config.api.resultsWebhookUrl);
 
-          let username = playerId; // Fallback to Discord ID
-          try {
-            const user = await this.client.users.fetch(playerId);
-            username = user.username;
-          } catch (error) {
-            console.warn(`Could not fetch username for user ${playerId}:`, error);
-          }
+      // Validate and parse the URL
+      let webhookUrl: string = '';
+      try {
+        // Remove quotes if they exist in the environment variable
+        webhookUrl = config.api.resultsWebhookUrl.replace(/['"]/g, '');
+        console.log('Cleaned webhook URL:', webhookUrl);
 
-          return {
-            // id: index, // Not available - commented out
-            team: team,
-            name: username,
-            discord_id: playerId,
-            // score: 0, // Not available - commented out
-            // kills: 0, // Not available - commented out
-            // deaths: 0, // Not available - commented out
-            // ratio: 0, // Not available - commented out
-            // flag_grabs: 0, // Not available - commented out
-            // flag_captures: 0 // Not available - commented out
-          };
-        })
-      );
+        // Validate URL format
+        new URL(webhookUrl);
+        console.log('URL validation passed');
+      } catch (urlError) {
+        console.error('Invalid webhook URL format:', webhookUrl || config.api.resultsWebhookUrl);
+        console.error('URL parsing error:', urlError);
+        return;
+      }
 
-      // Create the match data payload based on the provided format
-      const matchData = {
-        server: "queue", // Static for now
-        map: this.match.map,
-        game_type: this.match.gamemodeId, // Could be dynamic based on gamemode
-        // game_duration_seconds: 67, // Not available - commented out
-        // score_limit: 200, // Not available - commented out
-        // time_limit: 0, // Not available - commented out
-        // score_red: winningTeam === 1 ? "WIN" : "LOSS", // Simplified for now
-        // score_blue: winningTeam === 2 ? "WIN" : "LOSS", // Simplified for now
-        players: playersWithNames
+      // Send the MatchResult data directly to the webhook
+      const matchResultObj = matchResult.toObject();
+
+      // Remove MongoDB-specific fields
+      const { _id, __v, ...cleanedData } = matchResultObj;
+
+      const webhookData = {
+        ...cleanedData,
+        server: "queue"
       };
 
-      const response = await fetch(config.api.resultsWebhookUrl, {
+      console.log('Webhook payload:', JSON.stringify(webhookData, null, 2));
+
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(matchData)
+        body: JSON.stringify(webhookData)
       });
 
       if (response.ok) {
-        console.log(`Successfully posted match ${this.match.id} to webhook`);
+        console.log(`Successfully posted match ${matchResult.matchId} to webhook`);
       } else {
         console.error(`Failed to post match to webhook: ${response.status} ${response.statusText}`);
       }
