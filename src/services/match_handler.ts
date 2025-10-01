@@ -565,7 +565,7 @@ export class MatchHandler {
     }
 
     const totalPlayers = this.match.players.length;
-    const majority = Math.ceil(totalPlayers / 2);
+    const majority = Math.ceil(totalPlayers / 2) + 1; // more than half
 
     const team1Votes = this.match.votes.team1.length;
     const team2Votes = this.match.votes.team2.length;
