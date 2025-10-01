@@ -6,6 +6,9 @@ export declare const config: {
     mongodb: {
         uri: string;
     };
+    api: {
+        webhookUrl: string;
+    };
 };
 export declare function validateEnvironment(): void;
 //# sourceMappingURL=environment.d.ts.map

@@ -14,6 +14,9 @@ exports.config = {
     },
     mongodb: {
         uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/teeworlds-league'
+    },
+    api: {
+        webhookUrl: process.env.RESULTS_WEBHOOK_URL || ''
     }
 };
 function validateEnvironment() {

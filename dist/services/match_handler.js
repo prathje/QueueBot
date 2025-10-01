@@ -7,6 +7,7 @@ const Match_1 = require("../models/Match");
 const MatchResult_1 = require("../models/MatchResult");
 const players_1 = require("./players");
 const mutex_1 = require("../utils/mutex");
+const environment_1 = require("../config/environment");
 class MatchHandler {
     constructor(client, guild, match, onPlayersJoinQueue, onMatchClose) {
         this.channel = null;
@@ -477,9 +478,72 @@ class MatchHandler {
                         .setColor(0xFFD700)]
             });
         }
+        // Post match data to webhook
+        await this.postMatchToWebhook(winningTeam);
         setTimeout(async () => {
             await this.closeMatch();
         }, 10000);
+    }
+    async postMatchToWebhook(winningTeam) {
+        if (!environment_1.config.api.webhookUrl) {
+            console.log('No RESULTS_WEBHOOK_URL configured, skipping match posting');
+            return;
+        }
+        try {
+            // Fetch Discord usernames for all players
+            const playersWithNames = await Promise.all(this.match.players.map(async (playerId, index) => {
+                const isTeam1 = this.match.teams.team1.includes(playerId);
+                const team = isTeam1 ? "red" : "blue";
+                let username = playerId; // Fallback to Discord ID
+                try {
+                    const user = await this.client.users.fetch(playerId);
+                    username = user.username;
+                }
+                catch (error) {
+                    console.warn(`Could not fetch username for user ${playerId}:`, error);
+                }
+                return {
+                    id: index,
+                    team: team,
+                    name: username,
+                    discord_id: playerId,
+                    // score: 0, // Not available - commented out
+                    // kills: 0, // Not available - commented out
+                    // deaths: 0, // Not available - commented out
+                    // ratio: 0, // Not available - commented out
+                    // flag_grabs: 0, // Not available - commented out
+                    // flag_captures: 0 // Not available - commented out
+                };
+            }));
+            // Create the match data payload based on the provided format
+            const matchData = {
+                server: "unnamed server", // Static for now
+                map: this.match.map,
+                game_type: "gctf", // Could be dynamic based on gamemode
+                // game_duration_seconds: 67, // Not available - commented out
+                // score_limit: 200, // Not available - commented out
+                // time_limit: 0, // Not available - commented out
+                // score_red: winningTeam === 1 ? "WIN" : "LOSS", // Simplified for now
+                // score_blue: winningTeam === 2 ? "WIN" : "LOSS", // Simplified for now
+                players: playersWithNames
+            };
+            const response = await fetch(environment_1.config.api.webhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(matchData)
+            });
+            if (response.ok) {
+                console.log(`Successfully posted match ${this.match.id} to webhook`);
+            }
+            else {
+                console.error(`Failed to post match to webhook: ${response.status} ${response.statusText}`);
+            }
+        }
+        catch (error) {
+            console.error('Error posting match to webhook:', error);
+        }
     }
     async cancelMatch(reason) {
         if (this.readyTimeout) {

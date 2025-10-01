@@ -103,7 +103,7 @@ class Queue {
         const playersInQueue = this.playerService.getPlayersInQueue(this.config.id);
         const embed = new discord_js_1.EmbedBuilder()
             .setTitle(`${this.config.displayName} Queue`)
-            .setDescription(`Map Pool: ${this.config.mapPool.join(', ')}`)
+            .setDescription(`**Map Pool:** ${this.config.mapPool.join(', ')}`)
             .setTimestamp();
         if (this.disabled) {
             embed
@@ -352,7 +352,7 @@ class Queue {
             if (this.queueMessage) {
                 const shutdownEmbed = new discord_js_1.EmbedBuilder()
                     .setTitle(`${this.config.displayName} Queue`)
-                    .setDescription(`Map Pool: ${this.config.mapPool.join(', ')}`)
+                    .setDescription(`**Map Pool:** ${this.config.mapPool.join(', ')}`)
                     .addFields({ name: 'Status', value: '💤 Queue is currently sleeping', inline: true }, { name: 'Info', value: 'Bot is restarting or shutting down', inline: true })
                     .setColor(0xFF6B6B)
                     .setTimestamp();

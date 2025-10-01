@@ -19,6 +19,7 @@ import { MatchResult } from '../models/MatchResult';
 import { PlayerService } from './players';
 import { shuffled } from '../utils';
 import { Mutex } from '../utils/mutex';
+import { config } from '../config/environment';
 
 export class MatchHandler {
   private client: Client;
@@ -59,7 +60,6 @@ export class MatchHandler {
     await this.saveMatch();
     await this.createMatchChannel();
     await this.createVoiceChannels();
-    await this.setupMatchMessage();
     this.setupInteractionHandlers();
     this.match.state = MatchState.CREATED;
     await this.updateMatch();
@@ -193,28 +193,6 @@ export class MatchHandler {
     } catch (error) {
       console.error('Error creating voice channels:', error);
       throw error;
-    }
-  }
-
-  private async setupMatchMessage(): Promise<void> {
-    if (!this.channel) return;
-
-    const embed = this.createMatchEmbed();
-    const row = this.createMatchButtons();
-
-    try {
-      const messageOptions: any = {
-        content: `Match found! <@${this.match.players.join('> <@')}>`,
-        embeds: [embed]
-      };
-
-      if (row) {
-        messageOptions.components = [row];
-      }
-
-      this.matchMessage = await this.channel.send(messageOptions);
-    } catch (error) {
-      console.error('Error setting up match message:', error);
     }
   }
 
@@ -569,9 +547,79 @@ export class MatchHandler {
       });
     }
 
+    // Post match data to webhook
+    await this.postMatchToWebhook(winningTeam);
+
     setTimeout(async () => {
       await this.closeMatch();
     }, 10000);
+  }
+
+  private async postMatchToWebhook(winningTeam: 1 | 2): Promise<void> {
+    if (!config.api.resultsWebhookUrl) {
+      console.log('No RESULTS_WEBHOOK_URL configured, skipping match posting');
+      return;
+    }
+
+    try {
+      // Fetch Discord usernames for all players
+      const playersWithNames = await Promise.all(
+        this.match.players.map(async (playerId, index) => {
+          const isTeam1 = this.match.teams.team1.includes(playerId);
+          const team = isTeam1 ? "red" : "blue";
+
+          let username = playerId; // Fallback to Discord ID
+          try {
+            const user = await this.client.users.fetch(playerId);
+            username = user.username;
+          } catch (error) {
+            console.warn(`Could not fetch username for user ${playerId}:`, error);
+          }
+
+          return {
+            id: index,
+            team: team,
+            name: username,
+            discord_id: playerId,
+            // score: 0, // Not available - commented out
+            // kills: 0, // Not available - commented out
+            // deaths: 0, // Not available - commented out
+            // ratio: 0, // Not available - commented out
+            // flag_grabs: 0, // Not available - commented out
+            // flag_captures: 0 // Not available - commented out
+          };
+        })
+      );
+
+      // Create the match data payload based on the provided format
+      const matchData = {
+        server: "queue", // Static for now
+        map: this.match.map,
+        game_type: this.match.gamemodeId, // Could be dynamic based on gamemode
+        // game_duration_seconds: 67, // Not available - commented out
+        // score_limit: 200, // Not available - commented out
+        // time_limit: 0, // Not available - commented out
+        // score_red: winningTeam === 1 ? "WIN" : "LOSS", // Simplified for now
+        // score_blue: winningTeam === 2 ? "WIN" : "LOSS", // Simplified for now
+        players: playersWithNames
+      };
+
+      const response = await fetch(config.api.resultsWebhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(matchData)
+      });
+
+      if (response.ok) {
+        console.log(`Successfully posted match ${this.match.id} to webhook`);
+      } else {
+        console.error(`Failed to post match to webhook: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error posting match to webhook:', error);
+    }
   }
 
   private async cancelMatch(reason: string): Promise<void> {
@@ -683,23 +731,29 @@ export class MatchHandler {
   }
 
   private async updateMatchMessage(): Promise<void> {
-    if (!this.matchMessage) return;
+    if (!this.channel) return;
 
     const embed = this.createMatchEmbed();
     const row = this.createMatchButtons();
 
+
     try {
-      const editOptions: any = {
+      const messageOptions: any = {
+        content: `Match found! <@${this.match.players.join('> <@')}>`,
         embeds: [embed]
       };
-
+      
       if (row) {
-        editOptions.components = [row];
+        messageOptions.components = [row];
       } else {
-        editOptions.components = [];
+        messageOptions.components = [];
       }
 
-      await this.matchMessage.edit(editOptions);
+      if (this.matchMessage) {
+        await this.matchMessage.edit(messageOptions);
+      } else {
+        this.matchMessage = await this.channel.send(messageOptions);
+      }
     } catch (error) {
       console.error('Error updating match message:', error);
     }
