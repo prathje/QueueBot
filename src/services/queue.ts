@@ -404,6 +404,8 @@ export class Queue {
         );
         await matchHandler.initialize();
         this.activeMatches.set(match.id, matchHandler);
+
+        this.updateQueueMessage()
       }
     }).catch(error => {
       console.error('Error checking for match:', error);
