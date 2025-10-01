@@ -292,12 +292,13 @@ export class Queue {
 
   private async handleRefreshQueue(interaction: ButtonInteraction): Promise<void> {
     try {
-      await this.updateQueueMessage();
 
       await interaction.reply({
         content: '🔄 Refreshed!',
         flags: MessageFlags.Ephemeral
       });
+
+      await this.updateQueueMessage();
 
     } catch (error) {
       console.error('Error handling queue refresh:', error);
