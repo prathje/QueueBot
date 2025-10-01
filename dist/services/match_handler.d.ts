@@ -39,7 +39,7 @@ export declare class MatchHandler {
     private handleVote;
     private checkVoteResults;
     private completeMatch;
-    private postMatchToWebhook;
+    private postMatchResultToWebhook;
     private cancelMatch;
     private closeMatch;
     private updateMatchMessage;

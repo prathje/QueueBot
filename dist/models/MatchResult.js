@@ -13,6 +13,8 @@ const MatchResultSchema = new mongoose_1.Schema({
         team2: [{ type: String, required: true }]
     },
     players: [{ type: String, required: true }],
+    displayNames: { type: Map, of: String, default: {} },
+    startedAt: { type: Date, required: true },
     completedAt: { type: Date, default: Date.now }
 });
 exports.MatchResult = (0, mongoose_1.model)('MatchResult', MatchResultSchema);
