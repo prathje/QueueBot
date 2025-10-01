@@ -7,7 +7,7 @@ export class MessageUpdater {
   private lastUpdateTime: number;
   private readonly delay: number;
 
-  constructor(message: Message, delay: number = 1000) {
+  constructor(message: Message, delay: number = 750) {
     this.message = message;
     this.delay = delay;
     this.lastUpdateTime = Date.now();
