@@ -603,11 +603,15 @@ export class MatchHandler {
       try {
         const user = await this.client.users.fetch(playerId);
         displayNames[playerId] = user.username;
+        console.log(`Collected display name for ${playerId}: ${user.username}`);
       } catch (error) {
         console.warn(`Could not fetch username for user ${playerId}:`, error);
         displayNames[playerId] = playerId; // Fallback to Discord ID
+        console.log(`Using fallback display name for ${playerId}: ${playerId}`);
       }
     }
+
+    console.log('Final displayNames object:', displayNames);
 
     const matchResult = new MatchResult({
       matchId: this.match.id,
@@ -628,6 +632,8 @@ export class MatchHandler {
     try {
       await matchResult.save();
       console.log(`Match ${this.match.id} completed, team ${winningTeam} wins`);
+      console.log('Saved matchResult displayNames:', matchResult.displayNames);
+      console.log('Saved matchResult toObject displayNames:', matchResult.toObject().displayNames);
     } catch (error) {
       console.error('Error saving match result:', error);
     }

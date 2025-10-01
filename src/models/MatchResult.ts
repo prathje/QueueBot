@@ -14,7 +14,7 @@ const MatchResultSchema = new Schema<IMatchResultDocument>({
     team2: [{ type: String, required: true }]
   },
   players: [{ type: String, required: true }],
-  displayNames: { type: Map, of: String, default: {} },
+  displayNames: { type: Object, default: {} },
   startedAt: { type: Date, required: true },
   completedAt: { type: Date, default: Date.now }
 });

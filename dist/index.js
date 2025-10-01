@@ -125,15 +125,15 @@ class TeeWorldsLeagueBot {
                 displayName: 'Test',
                 queues: [
                     {
-                        id: 'test',
-                        displayName: 'Test (1)',
+                        id: 'test-1',
+                        displayName: 'Test 1 Player',
                         mapPool: ['ctf_test'],
                         playerCount: 1,
                         matchmakingAlgorithm: 'random teams'
                     },
                     {
                         id: 'test-2',
-                        displayName: 'Test (2)',
+                        displayName: 'Test 2 Players',
                         mapPool: ['ctf_test'],
                         playerCount: 2,
                         matchmakingAlgorithm: 'random teams'
