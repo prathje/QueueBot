@@ -565,17 +565,17 @@ export class MatchHandler {
     }
 
     const totalPlayers = this.match.players.length;
-    const majority = Math.ceil(totalPlayers / 2) + 1; // more than half
+    const majority = totalPlayers / 2.0; // we need more than half
 
     const team1Votes = this.match.votes.team1.length;
     const team2Votes = this.match.votes.team2.length;
     const cancelVotes = this.match.votes.cancel.length;
 
-    if (cancelVotes >= majority) {
+    if (cancelVotes > majority) {
       await this.cancelMatch('Match cancelled by player vote');
-    } else if (team1Votes >= majority) {
+    } else if (team1Votes > majority) {
       await this.completeMatch(1);
-    } else if (team2Votes >= majority) {
+    } else if (team2Votes > majority) {
       await this.completeMatch(2);
     } else {
       await this.updateMatch();
