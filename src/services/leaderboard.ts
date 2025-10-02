@@ -133,7 +133,9 @@ export class Leaderboard {
       leaderboard.forEach((entry, index) => {
         const rank = index + 1;
         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
-        const ratingDisplay = `${entry.ordinal.toFixed(1)} (${entry.matches} matches)`;
+        // format (${entry.matches} matches) but if matches == 1 then "1 match"
+        const matchText = entry.matches === 1 ? '1 match' : `${entry.matches} matches`;
+        const ratingDisplay = `${entry.ordinal.toFixed(1)} (${matchText})`;
 
         ranks.push(medal);
         players.push(`<@${entry.player}>`);
