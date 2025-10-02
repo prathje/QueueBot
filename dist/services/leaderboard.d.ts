@@ -17,12 +17,14 @@ export declare class Leaderboard {
     private createRankButton;
     private setupInteractionHandlers;
     private handleShowRank;
+    private handleShowHistory;
     updateLeaderboard(): Promise<void>;
     getUserRank(userId: string): Promise<{
         rank: number;
         entry: any;
     } | null>;
     createUserRankEmbed(userId: string, rank: number, entry: any): EmbedBuilder;
+    createUserHistoryEmbed(userId: string, history: any[]): EmbedBuilder;
     cleanup(): Promise<void>;
 }
 //# sourceMappingURL=leaderboard.d.ts.map

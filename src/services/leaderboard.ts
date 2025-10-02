@@ -154,13 +154,19 @@ export class Leaderboard {
   }
 
   private createRankButton(): ActionRowBuilder<ButtonBuilder> {
-    const button = new ButtonBuilder()
+    const rankButton = new ButtonBuilder()
       .setCustomId(`show_rank_${this.gamemodeId}`)
       .setLabel('Show My Rank')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🔍');
 
-    return new ActionRowBuilder<ButtonBuilder>().addComponents(button);
+    const historyButton = new ButtonBuilder()
+      .setCustomId(`show_history_${this.gamemodeId}`)
+      .setLabel('Show My History')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📈');
+
+    return new ActionRowBuilder<ButtonBuilder>().addComponents(rankButton, historyButton);
   }
 
   private setupInteractionHandlers(): void {
@@ -170,6 +176,8 @@ export class Leaderboard {
       // note that this does NOT run exclusively rn
       if (customId === `show_rank_${this.gamemodeId}`) {
         await this.handleShowRank(interaction);
+      } else if (customId === `show_history_${this.gamemodeId}`) {
+        await this.handleShowHistory(interaction);
       }
     };
 
@@ -200,6 +208,35 @@ export class Leaderboard {
       console.error('Error handling show rank interaction:', error);
       await interaction.reply({
         content: 'Sorry, there was an error retrieving your rank. Please try again later.',
+        flags: MessageFlags.Ephemeral
+      });
+    }
+  }
+
+  private async handleShowHistory(interaction: ButtonInteraction): Promise<void> {
+    try {
+      const userId = interaction.user.id;
+      const history = await this.ratingService.getPlayerRatingHistory(userId, 10);
+
+      if (!history || history.length === 0) {
+        await interaction.reply({
+          content: `You haven't played any matches in ${this.gamemodeDisplayName} yet. Play some matches to see your rating history!`,
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
+      const embed = this.createUserHistoryEmbed(userId, history);
+
+      await interaction.reply({
+        embeds: [embed],
+        flags: MessageFlags.Ephemeral
+      });
+
+    } catch (error) {
+      console.error('Error handling show history interaction:', error);
+      await interaction.reply({
+        content: 'Sorry, there was an error retrieving your history. Please try again later.',
         flags: MessageFlags.Ephemeral
       });
     }
@@ -265,6 +302,39 @@ export class Leaderboard {
         { name: 'Matches', value: `${entry.matches}`, inline: true }
       )
       .setTimestamp();
+  }
+
+  createUserHistoryEmbed(userId: string, history: any[]): EmbedBuilder {
+    const embed = new EmbedBuilder()
+      .setTitle(`Your Rating History in ${this.gamemodeDisplayName}`)
+      .setColor(0x00FF00)
+      .setDescription(`<@${userId}>, here are your last ${history.length} matches:`)
+      .setTimestamp();
+
+    // Build arrays for each column
+    const dates: string[] = [];
+    const diffs: string[] = [];
+
+    history.forEach((entry) => {
+      // Format as Discord timestamp (shows in user's local timezone)
+      const date = new Date(entry.date);
+      const timestamp = Math.floor(date.getTime() / 1000);
+      const dateString = `<t:${timestamp}:R>`;
+
+      // Format ordinal diff
+      const diffString = entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(1)}` : `${entry.ordinalDiff.toFixed(1)}`;
+
+      dates.push(dateString);
+      diffs.push(diffString);
+    });
+
+    // Add two fields with all values joined by newlines
+    embed.addFields(
+      { name: 'Date', value: dates.join('\n'), inline: true },
+      { name: 'Difference', value: diffs.join('\n'), inline: true }
+    );
+
+    return embed;
   }
 
   async cleanup(): Promise<void> {

@@ -108,7 +108,9 @@ class Leaderboard {
             leaderboard.forEach((entry, index) => {
                 const rank = index + 1;
                 const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
-                const ratingDisplay = `${entry.ordinal.toFixed(1)} - ${entry.matches} matches`;
+                // format (${entry.matches} matches) but if matches == 1 then "1 match"
+                const matchText = entry.matches === 1 ? '1 match' : `${entry.matches} matches`;
+                const ratingDisplay = `${entry.ordinal.toFixed(1)} (${matchText})`;
                 ranks.push(medal);
                 players.push(`<@${entry.player}>`);
                 ratings.push(ratingDisplay);
@@ -119,20 +121,29 @@ class Leaderboard {
         return embed;
     }
     createRankButton() {
-        const button = new discord_js_1.ButtonBuilder()
+        const rankButton = new discord_js_1.ButtonBuilder()
             .setCustomId(`show_rank_${this.gamemodeId}`)
             .setLabel('Show My Rank')
             .setStyle(discord_js_1.ButtonStyle.Secondary)
             .setEmoji('🔍');
-        return new discord_js_1.ActionRowBuilder().addComponents(button);
+        const historyButton = new discord_js_1.ButtonBuilder()
+            .setCustomId(`show_history_${this.gamemodeId}`)
+            .setLabel('Show My History')
+            .setStyle(discord_js_1.ButtonStyle.Secondary)
+            .setEmoji('📈');
+        return new discord_js_1.ActionRowBuilder().addComponents(rankButton, historyButton);
     }
     setupInteractionHandlers() {
         this.interactionListener = async (interaction) => {
             if (!interaction.isButton())
                 return;
             const { customId } = interaction;
+            // note that this does NOT run exclusively rn
             if (customId === `show_rank_${this.gamemodeId}`) {
                 await this.handleShowRank(interaction);
+            }
+            else if (customId === `show_history_${this.gamemodeId}`) {
+                await this.handleShowHistory(interaction);
             }
         };
         this.client.on('interactionCreate', this.interactionListener);
@@ -158,6 +169,31 @@ class Leaderboard {
             console.error('Error handling show rank interaction:', error);
             await interaction.reply({
                 content: 'Sorry, there was an error retrieving your rank. Please try again later.',
+                flags: discord_js_1.MessageFlags.Ephemeral
+            });
+        }
+    }
+    async handleShowHistory(interaction) {
+        try {
+            const userId = interaction.user.id;
+            const history = await this.ratingService.getPlayerRatingHistory(userId, 10);
+            if (!history || history.length === 0) {
+                await interaction.reply({
+                    content: `You haven't played any matches in ${this.gamemodeDisplayName} yet. Play some matches to see your rating history!`,
+                    flags: discord_js_1.MessageFlags.Ephemeral
+                });
+                return;
+            }
+            const embed = this.createUserHistoryEmbed(userId, history);
+            await interaction.reply({
+                embeds: [embed],
+                flags: discord_js_1.MessageFlags.Ephemeral
+            });
+        }
+        catch (error) {
+            console.error('Error handling show history interaction:', error);
+            await interaction.reply({
+                content: 'Sorry, there was an error retrieving your history. Please try again later.',
                 flags: discord_js_1.MessageFlags.Ephemeral
             });
         }
@@ -206,13 +242,36 @@ class Leaderboard {
     }
     createUserRankEmbed(userId, rank, entry) {
         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
-        const ratingDisplay = `${entry.ordinal.toFixed(1)} - ${entry.matches} matches`;
+        const ratingDisplay = `${entry.ordinal.toFixed(1)}`;
         return new discord_js_1.EmbedBuilder()
-            .setTitle(`Your Rank - ${this.gamemodeDisplayName}`)
+            .setTitle(`Your Rank in ${this.gamemodeDisplayName}`)
             .setColor(0x00FF00)
             .setDescription(`<@${userId}>, here's your current ranking:`)
-            .addFields({ name: 'Rank', value: medal, inline: true }, { name: 'Rating', value: ratingDisplay, inline: true }, { name: 'Total Players', value: `${entry.matches > 0 ? 'Ranked' : 'Unranked'}`, inline: true })
+            .addFields({ name: 'Rank', value: medal, inline: true }, { name: 'Rating', value: ratingDisplay, inline: true }, { name: 'Matches', value: `${entry.matches}`, inline: true })
             .setTimestamp();
+    }
+    createUserHistoryEmbed(userId, history) {
+        const embed = new discord_js_1.EmbedBuilder()
+            .setTitle(`Your Rating History in ${this.gamemodeDisplayName}`)
+            .setColor(0x00FF00)
+            .setDescription(`<@${userId}>, here are your last ${history.length} matches:`)
+            .setTimestamp();
+        // Build arrays for each column
+        const dates = [];
+        const diffs = [];
+        history.forEach((entry) => {
+            // Format as Discord timestamp (shows in user's local timezone)
+            const date = new Date(entry.date);
+            const timestamp = Math.floor(date.getTime() / 1000);
+            const dateString = `<t:${timestamp}:f>`;
+            // Format ordinal diff
+            const diffString = entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(1)}` : `${entry.ordinalDiff.toFixed(1)}`;
+            dates.push(dateString);
+            diffs.push(diffString);
+        });
+        // Add two fields with all values joined by newlines
+        embed.addFields({ name: 'Date', value: dates.join('\n'), inline: true }, { name: 'Difference', value: diffs.join('\n'), inline: true });
+        return embed;
     }
     async cleanup() {
         if (this.interactionListener) {
