@@ -12,6 +12,7 @@ export declare class Gamemode {
     private queues;
     private matchmakingMutex;
     private ratingService;
+    private leaderboardService;
     constructor(client: Client, guild: Guild, config: GamemodeConfig, matchmakingMutex: Mutex);
     initialize(): Promise<void>;
     private ensureCategory;

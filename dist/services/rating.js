@@ -13,7 +13,7 @@ class RatingService {
      * TODO: We might want to lock this at some point, however, if two matches finish at the same time, the players should be different
      */
     async processMatchResult(matchResult) {
-        console.log(`Processing rating changes for match ${matchResult.matchId} in gamemode ${this.gamemodeId}`);
+        //console.log(`Processing rating changes for match ${matchResult.matchId} in gamemode ${this.gamemodeId}`);
         // Get current ratings for all players
         const playerRatings = new Map();
         for (const playerId of matchResult.players) {
@@ -42,7 +42,7 @@ class RatingService {
             });
             await rating.save();
         }
-        console.log(`Saved rating changes for ${newRatings.size} players in match ${matchResult.matchId}`);
+        //console.log(`Saved rating changes for ${newRatings.size} players in match ${matchResult.matchId}`);
     }
     /**
      * Get current rating for a player (latest rating or default if no history)

@@ -1,7 +1,8 @@
-import { Client, CategoryChannel, ChannelType, Guild, TextChannel, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
+import { Client, CategoryChannel, ChannelType, Guild, TextChannel, PermissionFlagsBits } from 'discord.js';
 import { IGamemode, GamemodeConfig, IMatchResult } from '../types';
 import { Queue } from './queue';
 import { RatingService } from './rating';
+import { Leaderboard } from './leaderboard';
 import { Mutex } from '../utils/mutex';
 
 export class Gamemode {
@@ -13,6 +14,7 @@ export class Gamemode {
   private queues: Map<string, Queue> = new Map();
   private matchmakingMutex: Mutex;
   private ratingService: RatingService;
+  private leaderboardService: Leaderboard;
 
   constructor(client: Client, guild: Guild, config: GamemodeConfig, matchmakingMutex: Mutex) {
     this.client = client;
@@ -20,12 +22,14 @@ export class Gamemode {
     this.config = config;
     this.matchmakingMutex = matchmakingMutex;
     this.ratingService = new RatingService(config.id);
+    this.leaderboardService = new Leaderboard(client, guild, this.ratingService, config.id, config.displayName);
   }
 
   async initialize(): Promise<void> {
     await this.ensureCategory();
     await this.ensureResultsChannel();
-    await this.resetRating();
+    await this.resetRating(); // reset rating before initializing leaderboard
+    await this.leaderboardService.initialize(this.category!);
     await this.initializeQueues();
   }
 
@@ -107,6 +111,7 @@ export class Gamemode {
     }
   }
 
+
   private async initializeQueues(): Promise<void> {
     if (!this.category) {
       throw new Error('Category must be created before initializing queues');
@@ -169,6 +174,7 @@ export class Gamemode {
     await this.ratingService.resetRatings();
   }
 
+
   async onMatchResult(matchResult: IMatchResult): Promise<void> {
     console.log(`onMatchResult callback received for gamemode ${this.config.id}, match ${matchResult.matchId.slice(0, 8)}`);
 
@@ -176,8 +182,9 @@ export class Gamemode {
       // Process rating changes for all players in the match
       await this.ratingService.processMatchResult(matchResult);
 
-      const leaderboard = await this.ratingService.getLeaderboard(10);
-      console.log(`Top 10 leaderboard for gamemode ${this.config.displayName}:`, leaderboard);
+      // Update leaderboard after rating changes
+      await this.leaderboardService.updateLeaderboard();
+
       console.log(`Rating changes processed successfully for match ${matchResult.matchId.slice(0, 8)}`);
     } catch (error) {
       console.error(`Error processing rating changes for match ${matchResult.matchId}:`, error);

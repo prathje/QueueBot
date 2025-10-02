@@ -4,6 +4,7 @@ exports.Gamemode = void 0;
 const discord_js_1 = require("discord.js");
 const queue_1 = require("./queue");
 const rating_1 = require("./rating");
+const leaderboard_1 = require("./leaderboard");
 class Gamemode {
     constructor(client, guild, config, matchmakingMutex) {
         this.category = null;
@@ -14,11 +15,13 @@ class Gamemode {
         this.config = config;
         this.matchmakingMutex = matchmakingMutex;
         this.ratingService = new rating_1.RatingService(config.id);
+        this.leaderboardService = new leaderboard_1.Leaderboard(client, guild, this.ratingService, config.id, config.displayName);
     }
     async initialize() {
         await this.ensureCategory();
         await this.ensureResultsChannel();
-        await this.resetRating();
+        await this.resetRating(); // reset rating before initializing leaderboard
+        await this.leaderboardService.initialize(this.category);
         await this.initializeQueues();
     }
     async ensureCategory() {
@@ -145,8 +148,8 @@ class Gamemode {
         try {
             // Process rating changes for all players in the match
             await this.ratingService.processMatchResult(matchResult);
-            const leaderboard = await this.ratingService.getLeaderboard(10);
-            console.log(`Top 10 leaderboard for gamemode ${this.config.displayName}:`, leaderboard);
+            // Update leaderboard after rating changes
+            await this.leaderboardService.updateLeaderboard();
             console.log(`Rating changes processed successfully for match ${matchResult.matchId.slice(0, 8)}`);
         }
         catch (error) {
