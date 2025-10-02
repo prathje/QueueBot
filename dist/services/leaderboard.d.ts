@@ -11,6 +11,7 @@ export declare class Leaderboard {
     private getNumberWithOrdinal;
     constructor(client: Client, guild: Guild, ratingService: RatingService, gamemodeId: string, gamemodeDisplayName: string);
     initialize(category: CategoryChannel): Promise<void>;
+    private initializeMessageUpdater;
     private buildLeaderboardEmbed;
     updateLeaderboard(): Promise<void>;
 }

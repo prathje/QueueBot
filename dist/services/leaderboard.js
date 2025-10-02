@@ -59,12 +59,34 @@ class Leaderboard {
                 console.log(`Updated permissions for existing leaderboard channel: ${channelName}`);
             }
             this.leaderboardChannel = leaderboardChannel;
+            // Check for existing leaderboard message and initialize MessageUpdater
+            await this.initializeMessageUpdater();
             // Send initial leaderboard message
             await this.updateLeaderboard();
         }
         catch (error) {
             console.error(`Error ensuring leaderboard channel for gamemode ${this.gamemodeId}:`, error);
             throw error;
+        }
+    }
+    async initializeMessageUpdater() {
+        if (!this.leaderboardChannel)
+            return;
+        try {
+            // Fetch recent messages from the leaderboard channel
+            const messages = await this.leaderboardChannel.messages.fetch({ limit: 10 });
+            // Look for an existing leaderboard message from this bot
+            const existingMessage = messages.find(msg => msg.author.id === this.client.user?.id &&
+                msg.embeds.length > 0 &&
+                msg.embeds[0].title?.includes(`${this.gamemodeDisplayName} Leaderboard`));
+            if (existingMessage) {
+                // Reuse existing message
+                this.messageUpdater = new message_updater_1.MessageUpdater(existingMessage, 750);
+                console.log(`Found existing leaderboard message for ${this.gamemodeDisplayName}`);
+            }
+        }
+        catch (error) {
+            console.error(`Error checking for existing leaderboard message in ${this.gamemodeDisplayName}:`, error);
         }
     }
     buildLeaderboardEmbed(leaderboard) {
@@ -76,16 +98,20 @@ class Leaderboard {
             embed.setDescription('No players have completed matches yet.');
         }
         else {
-            // Add header fields
-            embed.addFields({ name: 'Rank', value: '\u200B', inline: true }, { name: 'Player', value: '\u200B', inline: true }, { name: 'Rating', value: '\u200B', inline: true });
-            // Add player fields
+            // Build arrays for each column
+            const ranks = [];
+            const players = [];
+            const ratings = [];
             leaderboard.forEach((entry, index) => {
                 const rank = index + 1;
                 const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
-                const ordinalChange = entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(1)}` : `${entry.ordinalDiff.toFixed(1)}`;
-                const ratingDisplay = `${entry.ordinal.toFixed(1)} (${ordinalChange}) - ${entry.matches} matches`;
-                embed.addFields({ name: '\u200B', value: medal, inline: true }, { name: '\u200B', value: `<@${entry.player}>`, inline: true }, { name: '\u200B', value: ratingDisplay, inline: true });
+                const ratingDisplay = `${entry.ordinal.toFixed(1)} - ${entry.matches} matches`;
+                ranks.push(medal);
+                players.push(`<@${entry.player}>`);
+                ratings.push(ratingDisplay);
             });
+            // Add three fields with all values joined by newlines
+            embed.addFields({ name: 'Rank', value: ranks.join('\n'), inline: true }, { name: 'Player', value: players.join('\n'), inline: true }, { name: 'Rating', value: ratings.join('\n'), inline: true });
         }
         return embed;
     }
