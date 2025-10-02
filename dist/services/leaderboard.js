@@ -4,6 +4,11 @@ exports.Leaderboard = void 0;
 const discord_js_1 = require("discord.js");
 const message_updater_1 = require("../utils/message_updater");
 class Leaderboard {
+    getNumberWithOrdinal(n) {
+        const s = ["th", "st", "nd", "rd"];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
     constructor(client, guild, ratingService, gamemodeId, gamemodeDisplayName) {
         this.leaderboardChannel = null;
         this.messageUpdater = null;
@@ -55,26 +60,11 @@ class Leaderboard {
             }
             this.leaderboardChannel = leaderboardChannel;
             // Send initial leaderboard message
-            await this.sendInitialLeaderboard();
+            await this.updateLeaderboard();
         }
         catch (error) {
             console.error(`Error ensuring leaderboard channel for gamemode ${this.gamemodeId}:`, error);
             throw error;
-        }
-    }
-    async sendInitialLeaderboard() {
-        if (!this.leaderboardChannel)
-            return;
-        try {
-            // Build initial leaderboard embed
-            const embed = this.buildLeaderboardEmbed(await this.ratingService.getLeaderboard(50));
-            // Send the initial message
-            const message = await this.leaderboardChannel.send({ embeds: [embed] });
-            // Create MessageUpdater for this message
-            this.messageUpdater = new message_updater_1.MessageUpdater(message, 750);
-        }
-        catch (error) {
-            console.error(`Error sending initial leaderboard for gamemode ${this.gamemodeId}:`, error);
         }
     }
     buildLeaderboardEmbed(leaderboard) {
@@ -86,29 +76,37 @@ class Leaderboard {
             embed.setDescription('No players have completed matches yet.');
         }
         else {
-            // Create leaderboard description with rankings
-            const description = leaderboard.map((entry, index) => {
+            // Add header fields
+            embed.addFields({ name: 'Rank', value: '\u200B', inline: true }, { name: 'Player', value: '\u200B', inline: true }, { name: 'Rating', value: '\u200B', inline: true });
+            // Add player fields
+            leaderboard.forEach((entry, index) => {
                 const rank = index + 1;
-                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`;
+                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
                 const ordinalChange = entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(1)}` : `${entry.ordinalDiff.toFixed(1)}`;
-                return `${medal} <@${entry.player}> - ${entry.ordinal.toFixed(1)} (${ordinalChange}) - ${entry.matches} matches`;
-            }).join('\n');
-            embed.setDescription(description);
+                const ratingDisplay = `${entry.ordinal.toFixed(1)} (${ordinalChange}) - ${entry.matches} matches`;
+                embed.addFields({ name: '\u200B', value: medal, inline: true }, { name: '\u200B', value: `<@${entry.player}>`, inline: true }, { name: '\u200B', value: ratingDisplay, inline: true });
+            });
         }
         return embed;
     }
     async updateLeaderboard() {
-        if (!this.messageUpdater) {
-            console.error('MessageUpdater not initialized');
-            return;
-        }
         try {
             // Get top 50 players from leaderboard
             const leaderboard = await this.ratingService.getLeaderboard(50);
             // Build leaderboard embed
             const embed = this.buildLeaderboardEmbed(leaderboard);
-            // Use MessageUpdater to throttle updates
-            this.messageUpdater.update({ embeds: [embed] });
+            if (this.messageUpdater) {
+                // Use MessageUpdater to throttle updates
+                this.messageUpdater.update({ embeds: [embed] });
+            }
+            else {
+                // Send the initial message
+                if (this.leaderboardChannel) {
+                    const message = await this.leaderboardChannel.send({ embeds: [embed] });
+                    // Create MessageUpdater for this message
+                    this.messageUpdater = new message_updater_1.MessageUpdater(message, 750);
+                }
+            }
         }
         catch (error) {
             console.error(`Error updating leaderboard for gamemode ${this.gamemodeDisplayName}:`, error);

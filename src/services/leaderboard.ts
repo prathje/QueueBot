@@ -11,6 +11,12 @@ export class Leaderboard {
   private gamemodeDisplayName: string;
   private gamemodeId: string;
 
+  private getNumberWithOrdinal(n: number): string {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
   constructor(
     client: Client,
     guild: Guild,
@@ -88,15 +94,27 @@ export class Leaderboard {
     if (leaderboard.length === 0) {
       embed.setDescription('No players have completed matches yet.');
     } else {
-      // Create leaderboard description with rankings
-      const description = leaderboard.map((entry, index) => {
-        const rank = index + 1;
-        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`;
-        const ordinalChange = entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(1)}` : `${entry.ordinalDiff.toFixed(1)}`;
-        return `${medal} <@${entry.player}> - ${entry.ordinal.toFixed(1)} (${ordinalChange}) - ${entry.matches} matches`;
-      }).join('\n');
+      // Add header fields
+      embed.addFields(
+        { name: 'Rank', value: '\u200B', inline: true },
+        { name: 'Player', value: '\u200B', inline: true },
+        { name: 'Rating', value: '\u200B', inline: true }
+      );
 
-      embed.setDescription(description);
+      // Add player fields
+      leaderboard.forEach((entry, index) => {
+        const rank = index + 1;
+        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
+        //const ordinalChange = entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(1)}` : `${entry.ordinalDiff.toFixed(1)}`;
+        //const ratingDisplay = `${entry.ordinal.toFixed(1)} (${ordinalChange}) - ${entry.matches} matches`;
+        const ratingDisplay = `${entry.ordinal.toFixed(1)} - ${entry.matches} matches`;
+
+        embed.addFields(
+          { name: '\u200B', value: medal, inline: true },
+          { name: '\u200B', value: `<@${entry.player}>`, inline: true },
+          { name: '\u200B', value: ratingDisplay, inline: true }
+        );
+      });
     }
 
     return embed;

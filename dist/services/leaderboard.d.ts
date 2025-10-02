@@ -8,9 +8,9 @@ export declare class Leaderboard {
     private messageUpdater;
     private gamemodeDisplayName;
     private gamemodeId;
+    private getNumberWithOrdinal;
     constructor(client: Client, guild: Guild, ratingService: RatingService, gamemodeId: string, gamemodeDisplayName: string);
     initialize(category: CategoryChannel): Promise<void>;
-    private sendInitialLeaderboard;
     private buildLeaderboardEmbed;
     updateLeaderboard(): Promise<void>;
 }
