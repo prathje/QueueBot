@@ -12,7 +12,7 @@ import {
   Message,
   MessageFlags
 } from 'discord.js';
-import { IQueue } from '../types';
+import { IQueue, IMatchResult } from '../types';
 import { PlayerService } from './players';
 import { MatchmakingService } from './matchmaking';
 import { MatchHandler } from './match_handler';
@@ -28,6 +28,8 @@ export class Queue {
   private category: CategoryChannel;
   private config: QueueConfig;
   private channel: TextChannel | null = null;
+  private resultsChannel: TextChannel | null = null;
+  private onMatchResult: ((matchResult: IMatchResult) => Promise<void>) | null = null;
   private queueMessage: Message | null = null;
   private messageUpdater: MessageUpdater | null = null;
   private playerService: PlayerService;
@@ -37,12 +39,14 @@ export class Queue {
   private interactionListener: ((interaction: any) => Promise<void>) | null = null;
   private disabled: boolean = false;
 
-  constructor(client: Client, guild: Guild, category: CategoryChannel, config: QueueConfig, matchmakingMutex: Mutex) {
+  constructor(client: Client, guild: Guild, category: CategoryChannel, config: QueueConfig, matchmakingMutex: Mutex, resultsChannel: TextChannel | null = null, onMatchResult: ((matchResult: IMatchResult) => Promise<void>) | null) {
     this.client = client;
     this.guild = guild;
     this.category = category;
     this.config = config;
     this.matchmakingMutex = matchmakingMutex;
+    this.resultsChannel = resultsChannel;
+    this.onMatchResult = onMatchResult || null;
     this.playerService = PlayerService.getInstance();
     this.matchmakingService = new MatchmakingService();
   }
@@ -401,7 +405,9 @@ export class Queue {
           (matchId: string) => {
             // Callback to handle match cleanup
             this.removeMatch(matchId);
-          }
+          },
+          this.resultsChannel,
+          this.onMatchResult
         );
         await matchHandler.initialize();
         this.activeMatches.set(match.id, matchHandler);

@@ -29,6 +29,7 @@ export class MatchHandler {
   private category: CategoryChannel;
   private match: IMatch;
   private channel: TextChannel | null = null;
+  private resultsChannel: TextChannel | null = null;
   private voiceChannel1: VoiceChannel | null = null;
   private voiceChannel2: VoiceChannel | null = null;
   private matchMessage: Message | null = null;
@@ -39,6 +40,7 @@ export class MatchHandler {
   private queueAutojoin: Set<string> = new Set();
   private onPlayersJoinQueue: ((playerIds: string[], queueId: string) => Promise<boolean>) | null = null;
   private onMatchClose: ((matchId: string) => void) | null = null;
+  private onMatchResult: ((matchResult: IMatchResult) => Promise<void>) | null = null;
   private interactionListener: ((interaction: any) => Promise<void>) | null = null;
   private playerNotificationMessages: Map<string, Message> = new Map();
 
@@ -51,16 +53,20 @@ export class MatchHandler {
     category: CategoryChannel,
     match: IMatch,
     onPlayersJoinQueue?: (playerIds: string[], queueId: string) => Promise<boolean>,
-    onMatchClose?: (matchId: string) => void
+    onMatchClose?: (matchId: string) => void,
+    resultsChannel?: TextChannel | null,
+    onMatchResult?: ((matchResult: IMatchResult) => Promise<void>) | null
   ) {
     this.client = client;
     this.guild = guild;
     this.category = category;
     this.match = match;
     this.match.startedAt = null; // Initialize as null
+    this.resultsChannel = resultsChannel || null;
     this.playerService = PlayerService.getInstance();
     this.onPlayersJoinQueue = onPlayersJoinQueue || null;
     this.onMatchClose = onMatchClose || null;
+    this.onMatchResult = onMatchResult || null;
   }
 
   async initialize(): Promise<void> {
@@ -650,6 +656,19 @@ export class MatchHandler {
     // Post match data to webhook
     await this.postMatchResultToWebhook(matchResult);
 
+    // Call the onMatchResult callback with the result (only for completed matches)
+    if (this.onMatchResult) {
+      try {
+        await this.onMatchResult(matchResult);
+        console.log('onMatchResult callback received for completed match');
+      } catch (error) {
+        console.error('Error calling onMatchResult callback:', error);
+      }
+    }
+
+    // Post to results channel
+    await this.postToResultsChannel();
+
     setTimeout(async () => {
       await this.closeMatch();
     }, 10000);
@@ -735,6 +754,9 @@ export class MatchHandler {
     }
 
     console.log(`Match ${this.match.id} cancelled: ${reason}`);
+
+    // Post to results channel for cancelled matches
+    await this.postToResultsChannel();
 
     setTimeout(async () => {
       await this.closeMatch();
@@ -955,9 +977,7 @@ export class MatchHandler {
     this.playerNotificationMessages.clear();
   }
 
-  private async updatePlayerNotificationWithStatus(playerId: string, message: any): Promise<void> {
-    const user = await this.client.users.fetch(playerId);
-
+  private async buildMatchNotificationMessage(playerId: string | null): Promise<{ content: string, embeds: EmbedBuilder[] }> {
     let statusTitle: string;
     let statusDescription: string;
     let statusColor: number;
@@ -968,40 +988,71 @@ export class MatchHandler {
       try {
         const matchResult = await MatchResult.findOne({ matchId: this.match.id });
         if (matchResult) {
-          const winnerTeam = matchResult.winningTeam === 1 ? this.match.teams.team1 : this.match.teams.team2;
-          const isWinner = winnerTeam.includes(playerId);
+          if (playerId) {
+            // Player-specific message
+            const winnerTeam = matchResult.winningTeam === 1 ? this.match.teams.team1 : this.match.teams.team2;
+            const isWinner = winnerTeam.includes(playerId);
 
-          if (isWinner) {
-            statusTitle = 'Match Won! 🎉';
-            statusDescription = `Congratulations! You won the match!`;
-            statusColor = 0x00FF00; // Green
+            if (isWinner) {
+              statusTitle = 'Match Won! 🎉';
+              statusDescription = `Congratulations! You won the match!`;
+              statusColor = 0x00FF00; // Green
+            } else {
+              statusTitle = 'Match Lost 😞';
+              statusDescription = `You lost the match. Better luck next time!`;
+              statusColor = 0xFF0000; // Red
+            }
           } else {
-            statusTitle = 'Match Lost 😞';
-            statusDescription = `You lost the match. Better luck next time!`;
-            statusColor = 0xFF0000; // Red
+            // Results channel message
+            statusTitle = 'Match Completed 🏆';
+            statusDescription = `Match ${this.match.id.slice(0, 8)} has finished!`;
+            statusColor = 0xFFD700; // Gold
           }
           result = `${getTeamName(matchResult.winningTeam)} won`;
         } else {
           // Fallback if no match result found
-          statusTitle = 'Match Completed ✅';
-          statusDescription = `Your match has been completed.`;
+          if (playerId) {
+            statusTitle = 'Match Completed ✅';
+            statusDescription = `Your match has been completed.`;
+          } else {
+            statusTitle = 'Match Completed ✅';
+            statusDescription = `Match ${this.match.id.slice(0, 8)} has finished!`;
+          }
           statusColor = 0x0099FF; // Blue
+          result = 'Match completed';
         }
       } catch (error) {
         console.log(`Could not fetch match result for ${this.match.id}:`, error);
-        statusTitle = '✅ Match Completed';
-        statusDescription = `Your match has been completed.`;
+        if (playerId) {
+          statusTitle = '✅ Match Completed';
+          statusDescription = `Your match has been completed.`;
+        } else {
+          statusTitle = '✅ Match Completed';
+          statusDescription = `Match ${this.match.id.slice(0, 8)} has finished!`;
+        }
         statusColor = 0x0099FF; // Blue
+        result = 'Match completed';
       }
     } else if (this.match.state === MatchState.CANCELLED) {
-      statusTitle = 'Match Cancelled ❌';
-      statusDescription = `Your match was cancelled.`;
-      statusColor = 0xFFA500; // Orange+
+      if (playerId) {
+        statusTitle = 'Match Cancelled ❌';
+        statusDescription = `Your match was cancelled.`;
+      } else {
+        statusTitle = 'Match Cancelled ❌';
+        statusDescription = `Match ${this.match.id.slice(0, 8)} was cancelled.`;
+      }
+      statusColor = 0xFFA500; // Orange
       result = 'Match cancelled';
     } else {
+      if (playerId) {
         statusTitle = 'Match Closed';
         statusDescription = `Your match has been closed.`;
-        statusColor = 0x808080; // Grey
+      } else {
+        statusTitle = 'Match Closed';
+        statusDescription = `Match ${this.match.id.slice(0, 8)} has been closed.`;
+      }
+      statusColor = 0x808080; // Grey
+      result = 'Match closed';
     }
 
     const embed = new EmbedBuilder()
@@ -1017,11 +1068,29 @@ export class MatchHandler {
       .setColor(statusColor)
       .setTimestamp();
 
-    await message.edit({
-      content: `**Match History**`,
-      embeds: [embed]
-    });
+    const content = playerId ? `**Match History**` : ``;
+    return { content, embeds: [embed] };
   }
+
+  private async updatePlayerNotificationWithStatus(playerId: string, message: any): Promise<void> {
+    const messageData = await this.buildMatchNotificationMessage(playerId);
+    await message.edit(messageData);
+  }
+
+  private async postToResultsChannel(): Promise<void> {
+    if (!this.resultsChannel) {
+      return; // No results channel available
+    }
+
+    try {
+      const messageData = await this.buildMatchNotificationMessage(null);
+      await this.resultsChannel.send(messageData);
+      console.log(`Posted match result to results channel for match ${this.match.id}`);
+    } catch (error) {
+      console.error(`Error posting result to results channel for match ${this.match.id}:`, error);
+    }
+  }
+
 
   static async cleanupMatchChannels(guild: Guild, match: { matchId: string; discordChannelId: string | null; discordVoiceChannel1Id: string | null; discordVoiceChannel2Id: string | null }): Promise<number> {
     let deletedChannels = 0;
