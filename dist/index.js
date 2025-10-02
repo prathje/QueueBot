@@ -20,6 +20,8 @@ class TeeWorldsLeagueBot {
                 discord_js_1.GatewayIntentBits.MessageContent
             ]
         });
+        // Increase max listeners to prevent memory leak warnings
+        this.client.setMaxListeners(1000);
         this.setupEventHandlers();
     }
     setupEventHandlers() {
