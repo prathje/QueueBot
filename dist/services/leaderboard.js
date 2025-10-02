@@ -12,6 +12,7 @@ class Leaderboard {
     constructor(client, guild, ratingService, gamemodeId, gamemodeDisplayName) {
         this.leaderboardChannel = null;
         this.messageUpdater = null;
+        this.interactionListener = null;
         this.client = client;
         this.guild = guild;
         this.ratingService = ratingService;
@@ -61,6 +62,8 @@ class Leaderboard {
             this.leaderboardChannel = leaderboardChannel;
             // Check for existing leaderboard message and initialize MessageUpdater
             await this.initializeMessageUpdater();
+            // Setup interaction handlers
+            this.setupInteractionHandlers();
             // Send initial leaderboard message
             await this.updateLeaderboard();
         }
@@ -115,20 +118,65 @@ class Leaderboard {
         }
         return embed;
     }
+    createRankButton() {
+        const button = new discord_js_1.ButtonBuilder()
+            .setCustomId(`show_rank_${this.gamemodeId}`)
+            .setLabel('Show My Rank')
+            .setStyle(discord_js_1.ButtonStyle.Secondary)
+            .setEmoji('🔍');
+        return new discord_js_1.ActionRowBuilder().addComponents(button);
+    }
+    setupInteractionHandlers() {
+        this.interactionListener = async (interaction) => {
+            if (!interaction.isButton())
+                return;
+            const { customId } = interaction;
+            if (customId === `show_rank_${this.gamemodeId}`) {
+                await this.handleShowRank(interaction);
+            }
+        };
+        this.client.on('interactionCreate', this.interactionListener);
+    }
+    async handleShowRank(interaction) {
+        try {
+            const userId = interaction.user.id;
+            const userRank = await this.getUserRank(userId);
+            if (!userRank) {
+                await interaction.reply({
+                    content: `You haven't played any matches in ${this.gamemodeDisplayName} yet. Play some matches to get ranked!`,
+                    flags: discord_js_1.MessageFlags.Ephemeral
+                });
+                return;
+            }
+            const embed = this.createUserRankEmbed(userId, userRank.rank, userRank.entry);
+            await interaction.reply({
+                embeds: [embed],
+                flags: discord_js_1.MessageFlags.Ephemeral
+            });
+        }
+        catch (error) {
+            console.error('Error handling show rank interaction:', error);
+            await interaction.reply({
+                content: 'Sorry, there was an error retrieving your rank. Please try again later.',
+                flags: discord_js_1.MessageFlags.Ephemeral
+            });
+        }
+    }
     async updateLeaderboard() {
         try {
             // Get top 50 players from leaderboard
             const leaderboard = await this.ratingService.getLeaderboard(50);
-            // Build leaderboard embed
+            // Build leaderboard embed and button
             const embed = this.buildLeaderboardEmbed(leaderboard);
+            const button = this.createRankButton();
             if (this.messageUpdater) {
                 // Use MessageUpdater to throttle updates
-                this.messageUpdater.update({ embeds: [embed] });
+                this.messageUpdater.update({ embeds: [embed], components: [button] });
             }
             else {
                 // Send the initial message
                 if (this.leaderboardChannel) {
-                    const message = await this.leaderboardChannel.send({ embeds: [embed] });
+                    const message = await this.leaderboardChannel.send({ embeds: [embed], components: [button] });
                     // Create MessageUpdater for this message
                     this.messageUpdater = new message_updater_1.MessageUpdater(message, 750);
                 }
@@ -136,6 +184,45 @@ class Leaderboard {
         }
         catch (error) {
             console.error(`Error updating leaderboard for gamemode ${this.gamemodeDisplayName}:`, error);
+        }
+    }
+    async getUserRank(userId) {
+        try {
+            // Get full leaderboard to find user's position
+            const leaderboard = await this.ratingService.getLeaderboard(1000); // Get more entries to find user
+            const userIndex = leaderboard.findIndex(entry => entry.player === userId);
+            if (userIndex === -1) {
+                return null; // User not found on leaderboard
+            }
+            return {
+                rank: userIndex + 1,
+                entry: leaderboard[userIndex]
+            };
+        }
+        catch (error) {
+            console.error(`Error getting user rank for ${userId}:`, error);
+            return null;
+        }
+    }
+    createUserRankEmbed(userId, rank, entry) {
+        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
+        const ratingDisplay = `${entry.ordinal.toFixed(1)} - ${entry.matches} matches`;
+        return new discord_js_1.EmbedBuilder()
+            .setTitle(`Your Rank - ${this.gamemodeDisplayName}`)
+            .setColor(0x00FF00)
+            .setDescription(`<@${userId}>, here's your current ranking:`)
+            .addFields({ name: 'Rank', value: medal, inline: true }, { name: 'Rating', value: ratingDisplay, inline: true }, { name: 'Total Players', value: `${entry.matches > 0 ? 'Ranked' : 'Unranked'}`, inline: true })
+            .setTimestamp();
+    }
+    async cleanup() {
+        if (this.interactionListener) {
+            this.client.removeListener('interactionCreate', this.interactionListener);
+            this.interactionListener = null;
+            console.log(`Cleaned up interaction listeners for leaderboard ${this.gamemodeDisplayName}`);
+        }
+        if (this.messageUpdater) {
+            this.messageUpdater.destroy();
+            this.messageUpdater = null;
         }
     }
 }

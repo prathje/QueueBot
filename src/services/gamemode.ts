@@ -198,6 +198,8 @@ export class Gamemode {
       await queue.shutdown();
     }
 
+    await this.leaderboardService.cleanup();
+
     console.log(`Gamemode ${this.config.displayName} shutdown complete`);
   }
 }

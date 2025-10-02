@@ -161,6 +161,7 @@ class Gamemode {
         for (const queue of this.queues.values()) {
             await queue.shutdown();
         }
+        await this.leaderboardService.cleanup();
         console.log(`Gamemode ${this.config.displayName} shutdown complete`);
     }
 }

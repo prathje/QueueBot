@@ -1,4 +1,4 @@
-import { Client, TextChannel, EmbedBuilder, CategoryChannel, ChannelType, Guild, PermissionFlagsBits } from 'discord.js';
+import { Client, TextChannel, EmbedBuilder, CategoryChannel, ChannelType, Guild, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageFlags } from 'discord.js';
 import { RatingService } from './rating';
 import { MessageUpdater } from '../utils/message_updater';
 
@@ -10,6 +10,7 @@ export class Leaderboard {
   private messageUpdater: MessageUpdater | null = null;
   private gamemodeDisplayName: string;
   private gamemodeId: string;
+  private interactionListener: ((interaction: any) => Promise<void>) | null = null;
 
   private getNumberWithOrdinal(n: number): string {
     const s = ["th", "st", "nd", "rd"];
@@ -80,6 +81,9 @@ export class Leaderboard {
       // Check for existing leaderboard message and initialize MessageUpdater
       await this.initializeMessageUpdater();
 
+      // Setup interaction handlers
+      this.setupInteractionHandlers();
+
       // Send initial leaderboard message
       await this.updateLeaderboard();
     } catch (error) {
@@ -129,7 +133,7 @@ export class Leaderboard {
       leaderboard.forEach((entry, index) => {
         const rank = index + 1;
         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
-        const ratingDisplay = `${entry.ordinal.toFixed(1)} - ${entry.matches} matches`;
+        const ratingDisplay = `${entry.ordinal.toFixed(1)} (${entry.matches} matches)`;
 
         ranks.push(medal);
         players.push(`<@${entry.player}>`);
@@ -147,28 +151,130 @@ export class Leaderboard {
     return embed;
   }
 
+  private createRankButton(): ActionRowBuilder<ButtonBuilder> {
+    const button = new ButtonBuilder()
+      .setCustomId(`show_rank_${this.gamemodeId}`)
+      .setLabel('Show My Rank')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🔍');
+
+    return new ActionRowBuilder<ButtonBuilder>().addComponents(button);
+  }
+
+  private setupInteractionHandlers(): void {
+    this.interactionListener = async (interaction) => {
+      if (!interaction.isButton()) return;
+      const { customId } = interaction;
+      // note that this does NOT run exclusively rn
+      if (customId === `show_rank_${this.gamemodeId}`) {
+        await this.handleShowRank(interaction);
+      }
+    };
+
+    this.client.on('interactionCreate', this.interactionListener);
+  }
+
+  private async handleShowRank(interaction: ButtonInteraction): Promise<void> {
+    try {
+      const userId = interaction.user.id;
+      const userRank = await this.getUserRank(userId);
+
+      if (!userRank) {
+        await interaction.reply({
+          content: `You haven't played any matches in ${this.gamemodeDisplayName} yet. Play some matches to get ranked!`,
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
+      const embed = this.createUserRankEmbed(userId, userRank.rank, userRank.entry);
+
+      await interaction.reply({
+        embeds: [embed],
+        flags: MessageFlags.Ephemeral
+      });
+
+    } catch (error) {
+      console.error('Error handling show rank interaction:', error);
+      await interaction.reply({
+        content: 'Sorry, there was an error retrieving your rank. Please try again later.',
+        flags: MessageFlags.Ephemeral
+      });
+    }
+  }
+
   async updateLeaderboard(): Promise<void> {
     try {
       // Get top 50 players from leaderboard
       const leaderboard = await this.ratingService.getLeaderboard(50);
 
-      // Build leaderboard embed
+      // Build leaderboard embed and button
       const embed = this.buildLeaderboardEmbed(leaderboard);
-
+      const button = this.createRankButton();
 
       if (this.messageUpdater) {
         // Use MessageUpdater to throttle updates
-        this.messageUpdater.update({ embeds: [embed] });
+        this.messageUpdater.update({ embeds: [embed], components: [button] });
       } else {
         // Send the initial message
         if (this.leaderboardChannel) {
-          const message = await this.leaderboardChannel.send({ embeds: [embed] });
+          const message = await this.leaderboardChannel.send({ embeds: [embed], components: [button] });
           // Create MessageUpdater for this message
           this.messageUpdater = new MessageUpdater(message, 750);
         }
       }
     } catch (error) {
       console.error(`Error updating leaderboard for gamemode ${this.gamemodeDisplayName}:`, error);
+    }
+  }
+
+  async getUserRank(userId: string): Promise<{ rank: number, entry: any } | null> {
+    try {
+      // Get full leaderboard to find user's position
+      const leaderboard = await this.ratingService.getLeaderboard(1000); // Get more entries to find user
+
+      const userIndex = leaderboard.findIndex(entry => entry.player === userId);
+
+      if (userIndex === -1) {
+        return null; // User not found on leaderboard
+      }
+
+      return {
+        rank: userIndex + 1,
+        entry: leaderboard[userIndex]
+      };
+    } catch (error) {
+      console.error(`Error getting user rank for ${userId}:`, error);
+      return null;
+    }
+  }
+
+  createUserRankEmbed(userId: string, rank: number, entry: any): EmbedBuilder {
+    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
+    const ratingDisplay = `${entry.ordinal.toFixed(1)}`;
+
+    return new EmbedBuilder()
+      .setTitle(`Your Rank in ${this.gamemodeDisplayName}`)
+      .setColor(0x00FF00)
+      .setDescription(`<@${userId}>, here's your current ranking:`)
+      .addFields(
+        { name: 'Rank', value: medal, inline: true },
+        { name: 'Rating', value: ratingDisplay, inline: true },
+        { name: 'Matches', value: `${entry.matches}`, inline: true }
+      )
+      .setTimestamp();
+  }
+
+  async cleanup(): Promise<void> {
+    if (this.interactionListener) {
+      this.client.removeListener('interactionCreate', this.interactionListener);
+      this.interactionListener = null;
+      console.log(`Cleaned up interaction listeners for leaderboard ${this.gamemodeDisplayName}`);
+    }
+
+    if (this.messageUpdater) {
+      this.messageUpdater.destroy();
+      this.messageUpdater = null;
     }
   }
 }
