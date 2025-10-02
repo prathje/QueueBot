@@ -1,5 +1,5 @@
 import { Client, Guild, CategoryChannel, TextChannel } from 'discord.js';
-import { IQueue } from '../types';
+import { IQueue, IMatchResult } from '../types';
 import { MatchHandler } from './match_handler';
 import { Mutex } from '../utils/mutex';
 interface QueueConfig extends Omit<IQueue, 'players' | 'discordChannelId'> {
@@ -10,6 +10,8 @@ export declare class Queue {
     private category;
     private config;
     private channel;
+    private resultsChannel;
+    private onMatchResult;
     private queueMessage;
     private messageUpdater;
     private playerService;
@@ -18,7 +20,7 @@ export declare class Queue {
     private matchmakingMutex;
     private interactionListener;
     private disabled;
-    constructor(client: Client, guild: Guild, category: CategoryChannel, config: QueueConfig, matchmakingMutex: Mutex);
+    constructor(client: Client, guild: Guild, category: CategoryChannel, config: QueueConfig, matchmakingMutex: Mutex, resultsChannel: (TextChannel | null) | undefined, onMatchResult: ((matchResult: IMatchResult) => Promise<void>) | null);
     initialize(): Promise<void>;
     private ensureChannel;
     private setupQueueMessage;

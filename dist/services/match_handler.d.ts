@@ -1,11 +1,12 @@
-import { Client, Guild, CategoryChannel } from 'discord.js';
-import { IMatch, MatchState } from '../types';
+import { Client, Guild, CategoryChannel, TextChannel } from 'discord.js';
+import { IMatch, MatchState, IMatchResult } from '../types';
 export declare class MatchHandler {
     private client;
     private guild;
     private category;
     private match;
     private channel;
+    private resultsChannel;
     private voiceChannel1;
     private voiceChannel2;
     private matchMessage;
@@ -16,11 +17,12 @@ export declare class MatchHandler {
     private queueAutojoin;
     private onPlayersJoinQueue;
     private onMatchClose;
+    private onMatchResult;
     private interactionListener;
     private playerNotificationMessages;
     private static readonly READY_TIMEOUT;
     private static readonly VOTE_TIMEOUT;
-    constructor(client: Client, guild: Guild, category: CategoryChannel, match: IMatch, onPlayersJoinQueue?: (playerIds: string[], queueId: string) => Promise<boolean>, onMatchClose?: (matchId: string) => void);
+    constructor(client: Client, guild: Guild, category: CategoryChannel, match: IMatch, onPlayersJoinQueue?: (playerIds: string[], queueId: string) => Promise<boolean>, onMatchClose?: (matchId: string) => void, resultsChannel?: TextChannel | null, onMatchResult?: ((matchResult: IMatchResult) => Promise<void>) | null);
     initialize(): Promise<void>;
     private saveMatch;
     private updateMatch;
@@ -49,7 +51,9 @@ export declare class MatchHandler {
     forceCancel(reason?: string): Promise<void>;
     private notifyPlayersOfMatchChannel;
     private updatePlayerNotifications;
+    private buildMatchNotificationMessage;
     private updatePlayerNotificationWithStatus;
+    private postToResultsChannel;
     static cleanupMatchChannels(guild: Guild, match: {
         matchId: string;
         discordChannelId: string | null;

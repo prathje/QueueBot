@@ -61,6 +61,21 @@ export interface IMatchResult {
     startedAt: Date;
     completedAt: Date;
 }
+export interface RatingValue {
+    mu: number;
+    sigma: number;
+}
+export interface IRating {
+    player: string;
+    gamemode: string;
+    matchId: string;
+    date: Date;
+    before: RatingValue;
+    after: RatingValue;
+    ordinalBefore: number;
+    ordinalAfter: number;
+    ordinalDiff: number;
+}
 export declare enum MatchState {
     INITIAL = "initial",
     CREATED = "created",

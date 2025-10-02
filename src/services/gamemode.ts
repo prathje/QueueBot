@@ -1,6 +1,7 @@
 import { Client, CategoryChannel, ChannelType, Guild, TextChannel, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
 import { IGamemode, GamemodeConfig, IMatchResult } from '../types';
 import { Queue } from './queue';
+import { RatingService } from './rating';
 import { Mutex } from '../utils/mutex';
 
 export class Gamemode {
@@ -11,12 +12,14 @@ export class Gamemode {
   private resultsChannel: TextChannel | null = null;
   private queues: Map<string, Queue> = new Map();
   private matchmakingMutex: Mutex;
+  private ratingService: RatingService;
 
   constructor(client: Client, guild: Guild, config: GamemodeConfig, matchmakingMutex: Mutex) {
     this.client = client;
     this.guild = guild;
     this.config = config;
     this.matchmakingMutex = matchmakingMutex;
+    this.ratingService = new RatingService(config.id);
   }
 
   async initialize(): Promise<void> {
@@ -154,12 +157,23 @@ export class Gamemode {
     return this.resultsChannel;
   }
 
+  getRatingService(): RatingService {
+    return this.ratingService;
+  }
+
   async onMatchResult(matchResult: IMatchResult): Promise<void> {
     console.log(`onMatchResult callback received for gamemode ${this.config.id}, match ${matchResult.matchId.slice(0, 8)}`);
 
-    // TODO: Add ranking calculations here later
-    // This is where we can process the matchResult for ELO/ranking updates
-    // The matchResult object contains all the match data including winningTeam, players, teams, etc.
+    try {
+      // Process rating changes for all players in the match
+      await this.ratingService.processMatchResult(matchResult);
+
+      const leaderboard = await this.ratingService.getLeaderboard(10);
+      console.log(`Top 10 leaderboard for gamemode ${this.config.displayName}:`, leaderboard);
+      console.log(`Rating changes processed successfully for match ${matchResult.matchId.slice(0, 8)}`);
+    } catch (error) {
+      console.error(`Error processing rating changes for match ${matchResult.matchId}:`, error);
+    }
   }
 
   async shutdown(): Promise<void> {

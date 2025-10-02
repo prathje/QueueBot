@@ -659,7 +659,7 @@ export class MatchHandler {
     // Call the onMatchResult callback with the result (only for completed matches)
     if (this.onMatchResult) {
       try {
-        await this.onMatchResult(matchResult);
+        await this.onMatchResult(matchResult); // TODO: not sure if we want to await this or not
         console.log('onMatchResult callback received for completed match');
       } catch (error) {
         console.error('Error calling onMatchResult callback:', error);

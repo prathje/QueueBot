@@ -9,8 +9,10 @@ const mutex_1 = require("../utils/mutex");
 const message_updater_1 = require("../utils/message_updater");
 const utils_1 = require("../utils");
 class Queue {
-    constructor(client, guild, category, config, matchmakingMutex) {
+    constructor(client, guild, category, config, matchmakingMutex, resultsChannel = null, onMatchResult) {
         this.channel = null;
+        this.resultsChannel = null;
+        this.onMatchResult = null;
         this.queueMessage = null;
         this.messageUpdater = null;
         this.activeMatches = new Map();
@@ -21,6 +23,8 @@ class Queue {
         this.category = category;
         this.config = config;
         this.matchmakingMutex = matchmakingMutex;
+        this.resultsChannel = resultsChannel;
+        this.onMatchResult = onMatchResult || null;
         this.playerService = players_1.PlayerService.getInstance();
         this.matchmakingService = new matchmaking_1.MatchmakingService();
     }
@@ -317,7 +321,7 @@ class Queue {
                 }, (matchId) => {
                     // Callback to handle match cleanup
                     this.removeMatch(matchId);
-                });
+                }, this.resultsChannel, this.onMatchResult);
                 await matchHandler.initialize();
                 this.activeMatches.set(match.id, matchHandler);
                 this.updateQueueMessage();

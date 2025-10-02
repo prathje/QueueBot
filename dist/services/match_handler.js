@@ -10,8 +10,9 @@ const mutex_1 = require("../utils/mutex");
 const message_updater_1 = require("../utils/message_updater");
 const environment_1 = require("../config/environment");
 class MatchHandler {
-    constructor(client, guild, category, match, onPlayersJoinQueue, onMatchClose) {
+    constructor(client, guild, category, match, onPlayersJoinQueue, onMatchClose, resultsChannel, onMatchResult) {
         this.channel = null;
+        this.resultsChannel = null;
         this.voiceChannel1 = null;
         this.voiceChannel2 = null;
         this.matchMessage = null;
@@ -21,6 +22,7 @@ class MatchHandler {
         this.queueAutojoin = new Set();
         this.onPlayersJoinQueue = null;
         this.onMatchClose = null;
+        this.onMatchResult = null;
         this.interactionListener = null;
         this.playerNotificationMessages = new Map();
         this.client = client;
@@ -28,9 +30,11 @@ class MatchHandler {
         this.category = category;
         this.match = match;
         this.match.startedAt = null; // Initialize as null
+        this.resultsChannel = resultsChannel || null;
         this.playerService = players_1.PlayerService.getInstance();
         this.onPlayersJoinQueue = onPlayersJoinQueue || null;
         this.onMatchClose = onMatchClose || null;
+        this.onMatchResult = onMatchResult || null;
     }
     async initialize() {
         await this.saveMatch();
@@ -544,6 +548,18 @@ class MatchHandler {
         }
         // Post match data to webhook
         await this.postMatchResultToWebhook(matchResult);
+        // Call the onMatchResult callback with the result (only for completed matches)
+        if (this.onMatchResult) {
+            try {
+                await this.onMatchResult(matchResult); // TODO: not sure if we want to await this or not
+                console.log('onMatchResult callback received for completed match');
+            }
+            catch (error) {
+                console.error('Error calling onMatchResult callback:', error);
+            }
+        }
+        // Post to results channel
+        await this.postToResultsChannel();
         setTimeout(async () => {
             await this.closeMatch();
         }, 10000);
@@ -618,6 +634,8 @@ class MatchHandler {
             });
         }
         console.log(`Match ${this.match.id} cancelled: ${reason}`);
+        // Post to results channel for cancelled matches
+        await this.postToResultsChannel();
         setTimeout(async () => {
             await this.closeMatch();
         }, 10000);
@@ -808,8 +826,7 @@ class MatchHandler {
         }
         this.playerNotificationMessages.clear();
     }
-    async updatePlayerNotificationWithStatus(playerId, message) {
-        const user = await this.client.users.fetch(playerId);
+    async buildMatchNotificationMessage(playerId) {
         let statusTitle;
         let statusDescription;
         let statusColor;
@@ -819,44 +836,80 @@ class MatchHandler {
             try {
                 const matchResult = await MatchResult_1.MatchResult.findOne({ matchId: this.match.id });
                 if (matchResult) {
-                    const winnerTeam = matchResult.winningTeam === 1 ? this.match.teams.team1 : this.match.teams.team2;
-                    const isWinner = winnerTeam.includes(playerId);
-                    if (isWinner) {
-                        statusTitle = 'Match Won! 🎉';
-                        statusDescription = `Congratulations! You won the match!`;
-                        statusColor = 0x00FF00; // Green
+                    if (playerId) {
+                        // Player-specific message
+                        const winnerTeam = matchResult.winningTeam === 1 ? this.match.teams.team1 : this.match.teams.team2;
+                        const isWinner = winnerTeam.includes(playerId);
+                        if (isWinner) {
+                            statusTitle = 'Match Won! 🎉';
+                            statusDescription = `Congratulations! You won the match!`;
+                            statusColor = 0x00FF00; // Green
+                        }
+                        else {
+                            statusTitle = 'Match Lost 😞';
+                            statusDescription = `You lost the match. Better luck next time!`;
+                            statusColor = 0xFF0000; // Red
+                        }
                     }
                     else {
-                        statusTitle = 'Match Lost 😞';
-                        statusDescription = `You lost the match. Better luck next time!`;
-                        statusColor = 0xFF0000; // Red
+                        // Results channel message
+                        statusTitle = 'Match Completed 🏆';
+                        statusDescription = `Match ${this.match.id.slice(0, 8)} has finished!`;
+                        statusColor = 0xFFD700; // Gold
                     }
                     result = `${(0, types_1.getTeamName)(matchResult.winningTeam)} won`;
                 }
                 else {
                     // Fallback if no match result found
-                    statusTitle = 'Match Completed ✅';
-                    statusDescription = `Your match has been completed.`;
+                    if (playerId) {
+                        statusTitle = 'Match Completed ✅';
+                        statusDescription = `Your match has been completed.`;
+                    }
+                    else {
+                        statusTitle = 'Match Completed ✅';
+                        statusDescription = `Match ${this.match.id.slice(0, 8)} has finished!`;
+                    }
                     statusColor = 0x0099FF; // Blue
+                    result = 'Match completed';
                 }
             }
             catch (error) {
                 console.log(`Could not fetch match result for ${this.match.id}:`, error);
-                statusTitle = '✅ Match Completed';
-                statusDescription = `Your match has been completed.`;
+                if (playerId) {
+                    statusTitle = '✅ Match Completed';
+                    statusDescription = `Your match has been completed.`;
+                }
+                else {
+                    statusTitle = '✅ Match Completed';
+                    statusDescription = `Match ${this.match.id.slice(0, 8)} has finished!`;
+                }
                 statusColor = 0x0099FF; // Blue
+                result = 'Match completed';
             }
         }
         else if (this.match.state === types_1.MatchState.CANCELLED) {
-            statusTitle = 'Match Cancelled ❌';
-            statusDescription = `Your match was cancelled.`;
-            statusColor = 0xFFA500; // Orange+
+            if (playerId) {
+                statusTitle = 'Match Cancelled ❌';
+                statusDescription = `Your match was cancelled.`;
+            }
+            else {
+                statusTitle = 'Match Cancelled ❌';
+                statusDescription = `Match ${this.match.id.slice(0, 8)} was cancelled.`;
+            }
+            statusColor = 0xFFA500; // Orange
             result = 'Match cancelled';
         }
         else {
-            statusTitle = 'Match Closed';
-            statusDescription = `Your match has been closed.`;
+            if (playerId) {
+                statusTitle = 'Match Closed';
+                statusDescription = `Your match has been closed.`;
+            }
+            else {
+                statusTitle = 'Match Closed';
+                statusDescription = `Match ${this.match.id.slice(0, 8)} has been closed.`;
+            }
             statusColor = 0x808080; // Grey
+            result = 'Match closed';
         }
         const embed = new discord_js_1.EmbedBuilder()
             .setTitle(statusTitle)
@@ -864,10 +917,25 @@ class MatchHandler {
             .addFields({ name: 'Match ID', value: this.match.id.slice(0, 8), inline: true }, { name: 'Map', value: this.match.map, inline: true }, { name: 'Result', value: result, inline: true }, { name: types_1.TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true }, { name: types_1.TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true })
             .setColor(statusColor)
             .setTimestamp();
-        await message.edit({
-            content: `**Match History**`,
-            embeds: [embed]
-        });
+        const content = playerId ? `**Match History**` : ``;
+        return { content, embeds: [embed] };
+    }
+    async updatePlayerNotificationWithStatus(playerId, message) {
+        const messageData = await this.buildMatchNotificationMessage(playerId);
+        await message.edit(messageData);
+    }
+    async postToResultsChannel() {
+        if (!this.resultsChannel) {
+            return; // No results channel available
+        }
+        try {
+            const messageData = await this.buildMatchNotificationMessage(null);
+            await this.resultsChannel.send(messageData);
+            console.log(`Posted match result to results channel for match ${this.match.id}`);
+        }
+        catch (error) {
+            console.error(`Error posting result to results channel for match ${this.match.id}:`, error);
+        }
     }
     static async cleanupMatchChannels(guild, match) {
         let deletedChannels = 0;
@@ -922,6 +990,6 @@ class MatchHandler {
     }
 }
 exports.MatchHandler = MatchHandler;
-MatchHandler.READY_TIMEOUT = 1 * 60 * 1000; // 1 minute (there is no penalty for being slow to ready up rn)
+MatchHandler.READY_TIMEOUT = 3 * 60 * 1000; // 3 minutes (there is no penalty for being slow to ready up rn)
 MatchHandler.VOTE_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
 //# sourceMappingURL=match_handler.js.map

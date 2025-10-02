@@ -3,17 +3,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Gamemode = void 0;
 const discord_js_1 = require("discord.js");
 const queue_1 = require("./queue");
+const rating_1 = require("./rating");
 class Gamemode {
     constructor(client, guild, config, matchmakingMutex) {
         this.category = null;
+        this.resultsChannel = null;
         this.queues = new Map();
         this.client = client;
         this.guild = guild;
         this.config = config;
         this.matchmakingMutex = matchmakingMutex;
+        this.ratingService = new rating_1.RatingService(config.id);
     }
     async initialize() {
         await this.ensureCategory();
+        await this.ensureResultsChannel();
         await this.initializeQueues();
     }
     async ensureCategory() {
@@ -33,6 +37,56 @@ class Gamemode {
             throw error;
         }
     }
+    async ensureResultsChannel() {
+        if (!this.category) {
+            throw new Error('Category must be created before results channel');
+        }
+        try {
+            const channelName = `${this.config.id}-results`;
+            let resultsChannel = this.guild.channels.cache.find(ch => ch.name === channelName &&
+                ch.type === discord_js_1.ChannelType.GuildText &&
+                ch.parentId === this.category?.id);
+            if (!resultsChannel) {
+                resultsChannel = await this.guild.channels.create({
+                    name: channelName,
+                    type: discord_js_1.ChannelType.GuildText,
+                    parent: this.category.id,
+                    permissionOverwrites: [
+                        {
+                            id: this.guild.roles.everyone.id,
+                            allow: [discord_js_1.PermissionFlagsBits.ViewChannel],
+                            deny: [discord_js_1.PermissionFlagsBits.SendMessages, discord_js_1.PermissionFlagsBits.CreatePublicThreads, discord_js_1.PermissionFlagsBits.CreatePrivateThreads]
+                        },
+                        {
+                            id: this.client.user.id,
+                            allow: [discord_js_1.PermissionFlagsBits.ViewChannel, discord_js_1.PermissionFlagsBits.SendMessages, discord_js_1.PermissionFlagsBits.ManageChannels, discord_js_1.PermissionFlagsBits.ManageMessages]
+                        }
+                    ]
+                });
+                console.log(`Created results channel: ${channelName}`);
+            }
+            else {
+                // Update permissions for existing results channel
+                await resultsChannel.permissionOverwrites.set([
+                    {
+                        id: this.guild.roles.everyone.id,
+                        allow: [discord_js_1.PermissionFlagsBits.ViewChannel],
+                        deny: [discord_js_1.PermissionFlagsBits.SendMessages, discord_js_1.PermissionFlagsBits.CreatePublicThreads, discord_js_1.PermissionFlagsBits.CreatePrivateThreads]
+                    },
+                    {
+                        id: this.client.user.id,
+                        allow: [discord_js_1.PermissionFlagsBits.ViewChannel, discord_js_1.PermissionFlagsBits.SendMessages, discord_js_1.PermissionFlagsBits.ManageChannels, discord_js_1.PermissionFlagsBits.ManageMessages]
+                    }
+                ]);
+                console.log(`Updated permissions for existing results channel: ${channelName}`);
+            }
+            this.resultsChannel = resultsChannel;
+        }
+        catch (error) {
+            console.error(`Error ensuring results channel for gamemode ${this.config.id}:`, error);
+            throw error;
+        }
+    }
     async initializeQueues() {
         if (!this.category) {
             throw new Error('Category must be created before initializing queues');
@@ -42,7 +96,7 @@ class Gamemode {
                 const queue = new queue_1.Queue(this.client, this.guild, this.category, {
                     ...queueConfig,
                     gamemodeId: this.config.id
-                }, this.matchmakingMutex);
+                }, this.matchmakingMutex, this.resultsChannel, this.onMatchResult.bind(this));
                 await queue.initialize();
                 this.queues.set(queueConfig.id, queue);
                 console.log(`Initialized queue: ${queueConfig.displayName}`);
@@ -74,6 +128,23 @@ class Gamemode {
     }
     getCategory() {
         return this.category;
+    }
+    getResultsChannel() {
+        return this.resultsChannel;
+    }
+    getRatingService() {
+        return this.ratingService;
+    }
+    async onMatchResult(matchResult) {
+        console.log(`onMatchResult callback received for gamemode ${this.config.id}, match ${matchResult.matchId.slice(0, 8)}`);
+        try {
+            // Process rating changes for all players in the match
+            await this.ratingService.processMatchResult(matchResult);
+            console.log(`Rating changes processed successfully for match ${matchResult.matchId.slice(0, 8)}`);
+        }
+        catch (error) {
+            console.error(`Error processing rating changes for match ${matchResult.matchId}:`, error);
+        }
     }
     async shutdown() {
         console.log(`Shutting down gamemode: ${this.config.displayName}`);
