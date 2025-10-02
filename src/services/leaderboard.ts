@@ -135,7 +135,7 @@ export class Leaderboard {
         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
         // format (${entry.matches} matches) but if matches == 1 then "1 match"
         const matchText = entry.matches === 1 ? '1 match' : `${entry.matches} matches`;
-        const ratingDisplay = `${entry.ordinal.toFixed(2).padStart(7, ' ')} (${matchText})`;
+        const ratingDisplay = `${entry.ordinal.toFixed(2)} (${matchText})`;
 
         ranks.push(medal);
         players.push(`<@${entry.player}>`);
@@ -290,7 +290,7 @@ export class Leaderboard {
 
   createUserRankEmbed(userId: string, rank: number, entry: any): EmbedBuilder {
     const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
-    const ratingDisplay = `${entry.ordinal.toFixed(2).padStart(7, ' ')}`;
+    const ratingDisplay = `${entry.ordinal.toFixed(2)}`;
 
     return new EmbedBuilder()
       .setTitle(`Your Rank in ${this.gamemodeDisplayName}`)
@@ -322,7 +322,7 @@ export class Leaderboard {
       const dateString = `<t:${timestamp}:R>`;
 
       // Format ordinal diff with two decimal places and padding
-      const diffString = (entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(2)}` : `${entry.ordinalDiff.toFixed(2)}`).padStart(7, ' ');
+      const diffString = (entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(2)}` : `${entry.ordinalDiff.toFixed(2)}`);
 
       dates.push(dateString);
       diffs.push(diffString);

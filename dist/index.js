@@ -21,7 +21,11 @@ class TeeWorldsLeagueBot {
             ]
         });
         // Increase max listeners to prevent memory leak warnings
-        this.client.setMaxListeners(1000);
+        this.client.setMaxListeners(0);
+        setInterval(() => {
+            const listenerCount = this.client.listenerCount('interactionCreate');
+            console.log(`Current interactionCreate listeners: ${listenerCount}`);
+        }, 60 * 60 * 1000); // Log every hour
         this.setupEventHandlers();
     }
     setupEventHandlers() {
