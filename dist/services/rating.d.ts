@@ -1,7 +1,7 @@
 import { IRating, IMatchResult, RatingValue } from '../types';
 export declare class RatingService {
     private gamemodeId;
-    private defaultRating;
+    private ratingDefault;
     constructor(gamemodeId: string);
     /**
      * Process match result and calculate rating changes for all players
@@ -31,16 +31,12 @@ export declare class RatingService {
      */
     private calculateRatingChanges;
     /**
-     * Calculate ordinal rating from mu and sigma values using OpenSkill
+     * Clear all ratings for this gamemode
      */
-    private calculateOrdinal;
+    clearRatings(): Promise<void>;
     /**
-     * Save rating change to database
+     * Reset ratings by clearing existing ones and recomputing from historical match results
      */
-    private saveRatingChange;
-    /**
-     * Get gamemode ID
-     */
-    getGamemodeId(): string;
+    resetRatings(): Promise<void>;
 }
 //# sourceMappingURL=rating.d.ts.map

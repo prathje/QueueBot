@@ -1,4 +1,4 @@
-import { Rating } from '../models';
+import { Rating, MatchResult } from '../models';
 import { IRating, IMatchResult, RatingValue } from '../types';
 import { rating, rate, ordinal } from 'openskill';
 
@@ -15,7 +15,7 @@ export class RatingService {
    * TODO: We might want to lock this at some point, however, if two matches finish at the same time, the players should be different
    */
   async processMatchResult(matchResult: IMatchResult): Promise<void> {
-    console.log(`Processing rating changes for match ${matchResult.matchId} in gamemode ${this.gamemodeId}`);
+    //console.log(`Processing rating changes for match ${matchResult.matchId} in gamemode ${this.gamemodeId}`);
 
     // Get current ratings for all players
     const playerRatings = new Map<string, RatingValue>();
@@ -51,7 +51,7 @@ export class RatingService {
       await rating.save();
     }
 
-    console.log(`Saved rating changes for ${newRatings.size} players in match ${matchResult.matchId}`);
+    //console.log(`Saved rating changes for ${newRatings.size} players in match ${matchResult.matchId}`);
   }
 
   /**
@@ -148,5 +148,37 @@ export class RatingService {
     });
 
     return newRatings;
+  }
+
+  /**
+   * Clear all ratings for this gamemode
+   */
+  async clearRatings(): Promise<void> {
+    await Rating.deleteMany({ gamemode: this.gamemodeId });
+    console.log(`Cleared all ratings for gamemode ${this.gamemodeId}`);
+  }
+
+  /**
+   * Reset ratings by clearing existing ones and recomputing from historical match results
+   */
+  async resetRatings(): Promise<void> {
+    console.log(`Resetting ratings for gamemode ${this.gamemodeId}...`);
+
+    // Clear existing ratings
+    await this.clearRatings();
+
+    // Get all historical match results for this gamemode, ordered by completion time
+    const historicalResults = await MatchResult.find({ gamemodeId: this.gamemodeId })
+      .sort({ completedAt: 1 })
+      .lean();
+
+    console.log(`Found ${historicalResults.length} historical match results to reprocess`);
+
+    // Reprocess each match result in chronological order
+    for (const matchResult of historicalResults) {
+      await this.processMatchResult(matchResult as IMatchResult);
+    }
+
+    console.log(`Rating reset complete for gamemode ${this.gamemodeId}`);
   }
 }

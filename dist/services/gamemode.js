@@ -18,6 +18,7 @@ class Gamemode {
     async initialize() {
         await this.ensureCategory();
         await this.ensureResultsChannel();
+        await this.resetRating();
         await this.initializeQueues();
     }
     async ensureCategory() {
@@ -135,11 +136,17 @@ class Gamemode {
     getRatingService() {
         return this.ratingService;
     }
+    async resetRating() {
+        console.log(`Resetting ratings for gamemode: ${this.config.displayName}`);
+        await this.ratingService.resetRatings();
+    }
     async onMatchResult(matchResult) {
         console.log(`onMatchResult callback received for gamemode ${this.config.id}, match ${matchResult.matchId.slice(0, 8)}`);
         try {
             // Process rating changes for all players in the match
             await this.ratingService.processMatchResult(matchResult);
+            const leaderboard = await this.ratingService.getLeaderboard(10);
+            console.log(`Top 10 leaderboard for gamemode ${this.config.displayName}:`, leaderboard);
             console.log(`Rating changes processed successfully for match ${matchResult.matchId.slice(0, 8)}`);
         }
         catch (error) {

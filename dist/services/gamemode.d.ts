@@ -25,6 +25,7 @@ export declare class Gamemode {
     getCategory(): CategoryChannel | null;
     getResultsChannel(): TextChannel | null;
     getRatingService(): RatingService;
+    resetRating(): Promise<void>;
     onMatchResult(matchResult: IMatchResult): Promise<void>;
     shutdown(): Promise<void>;
 }

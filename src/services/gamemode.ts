@@ -25,8 +25,11 @@ export class Gamemode {
   async initialize(): Promise<void> {
     await this.ensureCategory();
     await this.ensureResultsChannel();
+    await this.resetRating();
     await this.initializeQueues();
   }
+
+
 
   private async ensureCategory(): Promise<void> {
     try {
@@ -159,6 +162,11 @@ export class Gamemode {
 
   getRatingService(): RatingService {
     return this.ratingService;
+  }
+
+  async resetRating(): Promise<void> {
+    console.log(`Resetting ratings for gamemode: ${this.config.displayName}`);
+    await this.ratingService.resetRatings();
   }
 
   async onMatchResult(matchResult: IMatchResult): Promise<void> {
