@@ -338,15 +338,29 @@ export class Leaderboard {
   }
 
   async cleanup(): Promise<void> {
+
+    // Remove buttons from leaderboard message but keep the message
+    if (this.messageUpdater) {
+      try {
+        // Get current leaderboard data
+        const leaderboard = await this.ratingService.getLeaderboard(50);
+        const embed = this.buildLeaderboardEmbed(leaderboard);
+
+        // Update message with embed but no components (removes buttons)
+        this.messageUpdater.update({ embeds: [embed], components: [] });
+        await this.messageUpdater.forceUpdate();
+      } catch (error) {
+        console.error(`Error removing buttons from leaderboard message: ${error}`);
+      }
+
+      this.messageUpdater.destroy();
+      this.messageUpdater = null;
+    }
+
     if (this.interactionListener) {
       this.client.removeListener('interactionCreate', this.interactionListener);
       this.interactionListener = null;
       console.log(`Cleaned up interaction listeners for leaderboard ${this.gamemodeDisplayName}`);
-    }
-
-    if (this.messageUpdater) {
-      this.messageUpdater.destroy();
-      this.messageUpdater = null;
     }
   }
 }

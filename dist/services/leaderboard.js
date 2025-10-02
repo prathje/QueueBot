@@ -263,7 +263,7 @@ class Leaderboard {
             // Format as Discord timestamp (shows in user's local timezone)
             const date = new Date(entry.date);
             const timestamp = Math.floor(date.getTime() / 1000);
-            const dateString = `<t:${timestamp}:f>`;
+            const dateString = `<t:${timestamp}:R>`;
             // Format ordinal diff
             const diffString = entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(1)}` : `${entry.ordinalDiff.toFixed(1)}`;
             dates.push(dateString);
@@ -279,7 +279,20 @@ class Leaderboard {
             this.interactionListener = null;
             console.log(`Cleaned up interaction listeners for leaderboard ${this.gamemodeDisplayName}`);
         }
+        // Remove buttons from leaderboard message but keep the message
         if (this.messageUpdater) {
+            try {
+                // Get current leaderboard data
+                const leaderboard = await this.ratingService.getLeaderboard(50);
+                const embed = this.buildLeaderboardEmbed(leaderboard);
+                // Update message with embed but no components (removes buttons)
+                await this.messageUpdater.forceUpdate();
+                this.messageUpdater.update({ embeds: [embed], components: [] });
+                await this.messageUpdater.forceUpdate();
+            }
+            catch (error) {
+                console.error(`Error removing buttons from leaderboard message: ${error}`);
+            }
             this.messageUpdater.destroy();
             this.messageUpdater = null;
         }
