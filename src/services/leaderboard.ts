@@ -270,7 +270,7 @@ export class Leaderboard {
   async getUserRank(userId: string): Promise<{ rank: number, entry: any } | null> {
     try {
       // Get full leaderboard to find user's position
-      const leaderboard = await this.ratingService.getLeaderboard(1000); // Get more entries to find user
+      const leaderboard = await this.ratingService.getLeaderboard(1000); // Get more entries to find user, TODO: This is not nice!
 
       const userIndex = leaderboard.findIndex(entry => entry.player === userId);
 
