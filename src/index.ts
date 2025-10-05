@@ -97,14 +97,14 @@ class TeeWorldsLeagueBot {
             displayName: 'gCTF 2v2',
             mapPool: ['ctf3', 'ctf4_old', 'ctf_cryochasm', 'ctf_5_limited', 'ctf_duskwood', 'ctf_tantum', 'ctf_mine', 'ctf_planet', 'ctf_ambiance'],
             playerCount: 4,
-            matchmakingAlgorithm: MatchmakingAlgorithm.RANDOM_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
           },
           {
             id: 'gctf_3v3',
             displayName: 'gCTF 3v3',
             mapPool: ['ctf2', 'ctf_5_limited', 'ctf_duskwood', 'ctf_mars', 'ctf_moon', 'ctf_chryochasm', 'ctf_exeliar', 'ctf_gartum'],
             playerCount: 6,
-            matchmakingAlgorithm: MatchmakingAlgorithm.RANDOM_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
           }
         ]
       },
@@ -117,28 +117,28 @@ class TeeWorldsLeagueBot {
             displayName: 'CTF 2v2',
             mapPool: ['ctf1_left', 'ctf_aurochs'],
             playerCount: 4,
-            matchmakingAlgorithm: MatchmakingAlgorithm.RANDOM_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
           },
           {
             id: 'ctf_3v3',
             displayName: 'CTF 3v3',
             mapPool: ['ctf3'],
             playerCount: 6,
-            matchmakingAlgorithm: MatchmakingAlgorithm.RANDOM_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
           },
           {
             id: 'ctf_4v4',
             displayName: 'CTF 4v4',
             mapPool: ['ctf_infiltrate'],
             playerCount: 8,
-            matchmakingAlgorithm: MatchmakingAlgorithm.RANDOM_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
           },
           {
             id: 'ctf_5v5',
             displayName: 'CTF 5v5',
             mapPool: ['ctf2'],
             playerCount: 10,
-            matchmakingAlgorithm: MatchmakingAlgorithm.RANDOM_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
           }
         ]
       },
@@ -151,7 +151,7 @@ class TeeWorldsLeagueBot {
             displayName: 'DM 1v1',
             mapPool: ['dm1'],
             playerCount: 2,
-            matchmakingAlgorithm: MatchmakingAlgorithm.RANDOM_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
           }
         ]
       },
@@ -164,14 +164,14 @@ class TeeWorldsLeagueBot {
             displayName: 'Test 1 Player',
             mapPool: ['ctf_test'],
             playerCount: 1,
-            matchmakingAlgorithm: MatchmakingAlgorithm.RANDOM_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
           },
           {
             id: 'test-2',
             displayName: 'Test 2 Players',
             mapPool: ['ctf_test'],
             playerCount: 2,
-            matchmakingAlgorithm: MatchmakingAlgorithm.RANDOM_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
           }
         ]
       }
@@ -230,7 +230,7 @@ class TeeWorldsLeagueBot {
           });
         } else if (commandName === 'queue_set_algorithm') {
           const algorithmChoice = interaction.options.getString('algorithm', true);
-          const algorithm = algorithmChoice === 'random teams' ? MatchmakingAlgorithm.RANDOM_TEAMS : MatchmakingAlgorithm.FAIR_TEAMS;
+          const algorithm = algorithmChoice === 'random teams' ? MatchmakingAlgorithm.FAIR_TEAMS : MatchmakingAlgorithm.FAIR_TEAMS;
           const displayName = algorithmChoice === 'random teams' ? 'Random Teams' : 'Fair Teams';
 
           await targetQueue.setAlgorithm(algorithm);
