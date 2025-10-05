@@ -230,7 +230,7 @@ class TeeWorldsLeagueBot {
           });
         } else if (commandName === 'queue_set_algorithm') {
           const algorithmChoice = interaction.options.getString('algorithm', true);
-          const algorithm = algorithmChoice === 'random teams' ? MatchmakingAlgorithm.FAIR_TEAMS : MatchmakingAlgorithm.FAIR_TEAMS;
+          const algorithm = algorithmChoice === 'random teams' ? MatchmakingAlgorithm.RANDOM_TEAMS : MatchmakingAlgorithm.FAIR_TEAMS;
           const displayName = algorithmChoice === 'random teams' ? 'Random Teams' : 'Fair Teams';
 
           await targetQueue.setAlgorithm(algorithm);
