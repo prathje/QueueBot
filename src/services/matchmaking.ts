@@ -3,6 +3,10 @@ import { IMatch, IQueue, MatchState } from '../types';
 import { PlayerService } from './players';
 import { shuffled, randomElement } from '../utils';
 
+export enum MatchmakingAlgorithm {
+  RANDOM_TEAMS = 'random teams'
+}
+
 export class MatchmakingService {
   private playerService: PlayerService;
 
@@ -18,7 +22,7 @@ export class MatchmakingService {
     }
 
     const selectedPlayers = this.selectPlayersForMatch(playersInQueue, queue.playerCount);
-    const teams = this.createTeams(selectedPlayers, queue.matchmakingAlgorithm);
+    const teams = this.createTeams(selectedPlayers, queue.matchmakingAlgorithm as MatchmakingAlgorithm);
     const map = this.selectMap(queue.mapPool);
 
     const match: IMatch = {
@@ -50,7 +54,11 @@ export class MatchmakingService {
     return shuffled(playersInQueue).slice(0, playerCount);
   }
 
-  private createTeams(players: string[], algorithm: string): { team1: string[]; team2: string[] } {
+  private createTeams(players: string[], algorithm: MatchmakingAlgorithm): { team1: string[]; team2: string[] } {
+
+    if (algorithm !== MatchmakingAlgorithm.RANDOM_TEAMS) {
+        throw new Error(`Unsupported matchmaking algorithm: ${algorithm}`);
+    }
     const shuffledPlayers = shuffled(players);
     const teamSize = Math.ceil(players.length / 2); // this was floor, but ceil makes sense for our test queue for a single player
 

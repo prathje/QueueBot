@@ -1,10 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MatchmakingService = void 0;
+exports.MatchmakingService = exports.MatchmakingAlgorithm = void 0;
 const uuid_1 = require("uuid");
 const types_1 = require("../types");
 const players_1 = require("./players");
 const utils_1 = require("../utils");
+var MatchmakingAlgorithm;
+(function (MatchmakingAlgorithm) {
+    MatchmakingAlgorithm["RANDOM_TEAMS"] = "random teams";
+})(MatchmakingAlgorithm || (exports.MatchmakingAlgorithm = MatchmakingAlgorithm = {}));
 class MatchmakingService {
     constructor() {
         this.playerService = players_1.PlayerService.getInstance();
@@ -44,6 +48,9 @@ class MatchmakingService {
         return (0, utils_1.shuffled)(playersInQueue).slice(0, playerCount);
     }
     createTeams(players, algorithm) {
+        if (algorithm !== MatchmakingAlgorithm.RANDOM_TEAMS) {
+            throw new Error(`Unsupported matchmaking algorithm: ${algorithm}`);
+        }
         const shuffledPlayers = (0, utils_1.shuffled)(players);
         const teamSize = Math.ceil(players.length / 2); // this was floor, but ceil makes sense for our test queue for a single player
         return {
