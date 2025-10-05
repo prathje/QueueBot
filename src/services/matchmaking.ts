@@ -4,7 +4,8 @@ import { PlayerService } from './players';
 import { shuffled, randomElement } from '../utils';
 
 export enum MatchmakingAlgorithm {
-  RANDOM_TEAMS = 'random teams'
+  RANDOM_TEAMS = 'random teams',
+  FAIR_TEAMS = 'fair teams'
 }
 
 export class MatchmakingService {
@@ -56,9 +57,15 @@ export class MatchmakingService {
 
   private createTeams(players: string[], algorithm: MatchmakingAlgorithm): { team1: string[]; team2: string[] } {
 
-    if (algorithm !== MatchmakingAlgorithm.RANDOM_TEAMS) {
-        throw new Error(`Unsupported matchmaking algorithm: ${algorithm}`);
+    if (algorithm === MatchmakingAlgorithm.FAIR_TEAMS) {
+      return this.createTeamsFair(players);
     }
+
+    // random teams by default
+    return this.createTeamsRandom(players);
+  }
+
+  private createTeamsRandom(players: string[]): { team1: string[]; team2: string[] } {
     const shuffledPlayers = shuffled(players);
     const teamSize = Math.ceil(players.length / 2); // this was floor, but ceil makes sense for our test queue for a single player
 
@@ -66,6 +73,10 @@ export class MatchmakingService {
       team1: shuffledPlayers.slice(0, teamSize),
       team2: shuffledPlayers.slice(teamSize, teamSize * 2)
     };
+  }
+
+  private createTeamsFair(players: string[]): { team1: string[]; team2: string[] } {
+    // Placeholder for a fair team creation algorithm
   }
 
   private selectMap(mapPool: string[]): string {
