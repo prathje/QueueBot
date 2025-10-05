@@ -1,5 +1,5 @@
 /**
- * Utility functions for the Teeworlds League Queue Bot
+ * Utility functions
  */
 
 /**

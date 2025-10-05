@@ -1,0 +1,20 @@
+services:
+  bot_dev:
+    image: node:20
+    working_dir: /bot/
+    volumes:
+      - ./:/bot
+    #command: sh -c "npm install && npm run build && exec node dist/index.js"
+    command: sh -c "npm install && sleep infinity" # && exec npm run dev
+    depends_on:
+      - mongodb
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/queue-bot
+      - RESULTS_WEBHOOK_URL=""
+
+  mongodb:
+    image: mongo
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - ./data/db:/data/db

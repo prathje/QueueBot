@@ -1,6 +1,7 @@
-# Teeworlds League Queue Service
+# Queue Bot
 
-A Discord bot for matchmaking in Teeworlds League with TypeScript implementation.
+A Discord bot that integrates matchmaking queues into Discord channels written in TypeScript.
+This project runs on Node.js and uses MongoDB for persistent storage. The discord library used is [discord.js](https://discord.js.org/).
 
 ## Features
 

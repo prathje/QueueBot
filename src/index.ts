@@ -8,7 +8,7 @@ import { GamemodeConfig } from './types';
 import { deployCommands } from './commands/deploy';
 import { MatchmakingAlgorithm } from './services/matchmaking';
 
-class TeeWorldsLeagueBot {
+class QueueBot {
   private client: Client;
   private guild: Guild | null = null;
   private gamemodes: Map<string, Gamemode> = new Map();
@@ -312,5 +312,5 @@ class TeeWorldsLeagueBot {
 
 }
 
-const bot = new TeeWorldsLeagueBot();
+const bot = new QueueBot();
 bot.start().catch(console.error);

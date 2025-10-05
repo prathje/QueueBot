@@ -8,7 +8,7 @@ export const config = {
     guildId: process.env.GUILD_ID || ''
   },
   mongodb: {
-    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/teeworlds-league'
+    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/queue-bot'
   },
   api: {
     resultsWebhookUrl: process.env.RESULTS_WEBHOOK_URL || ''
