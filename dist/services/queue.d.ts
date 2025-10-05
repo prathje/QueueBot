@@ -1,5 +1,6 @@
 import { Client, Guild, CategoryChannel, TextChannel } from 'discord.js';
 import { IQueue, IMatchResult } from '../types';
+import { MatchmakingAlgorithm } from './matchmaking';
 import { MatchHandler } from './match_handler';
 import { Mutex } from '../utils/mutex';
 interface QueueConfig extends Omit<IQueue, 'players' | 'discordChannelId'> {
@@ -44,6 +45,9 @@ export declare class Queue {
     disable(): Promise<void>;
     enable(): Promise<void>;
     isDisabled(): boolean;
+    setAlgorithm(algorithm: MatchmakingAlgorithm): Promise<void>;
+    addMap(mapName: string): Promise<boolean>;
+    removeMap(mapName: string): Promise<boolean>;
     shutdown(): Promise<void>;
     private cancelActiveMatches;
 }

@@ -195,7 +195,9 @@ class TeeWorldsLeagueBot {
     try {
       const { commandName, channelId } = interaction;
 
-      if (commandName === 'queue_disable' || commandName === 'queue_enable') {
+      if (commandName === 'queue_disable' || commandName === 'queue_enable' ||
+          commandName === 'queue_set_algorithm' ||
+          commandName === 'queue_map_add' || commandName === 'queue_map_remove') {
         // Find the queue that matches this channel
         let targetQueue = null;
         for (const gamemode of this.gamemodes.values()) {
@@ -220,12 +222,50 @@ class TeeWorldsLeagueBot {
             content: `Queue **${targetQueue.getDisplayName()}** has been disabled. All players have been removed.`,
             ephemeral: true
           });
-        } else {
+        } else if (commandName === 'queue_enable') {
           await targetQueue.enable();
           await interaction.reply({
             content: `Queue **${targetQueue.getDisplayName()}** has been enabled.`,
             ephemeral: true
           });
+        } else if (commandName === 'queue_set_algorithm') {
+          const algorithmChoice = interaction.options.getString('algorithm', true);
+          const algorithm = algorithmChoice === 'random teams' ? MatchmakingAlgorithm.RANDOM_TEAMS : MatchmakingAlgorithm.FAIR_TEAMS;
+          const displayName = algorithmChoice === 'random teams' ? 'Random Teams' : 'Fair Teams';
+
+          await targetQueue.setAlgorithm(algorithm);
+          await interaction.reply({
+            content: `Queue **${targetQueue.getDisplayName()}** algorithm set to **${displayName}**.`,
+            ephemeral: true
+          });
+        } else if (commandName === 'queue_map_add') {
+          const mapName = interaction.options.getString('map', true);
+          const success = await targetQueue.addMap(mapName);
+          if (success) {
+            await interaction.reply({
+              content: `Map **${mapName}** added to queue **${targetQueue.getDisplayName()}**.`,
+              ephemeral: true
+            });
+          } else {
+            await interaction.reply({
+              content: `Map **${mapName}** is already in the map pool for queue **${targetQueue.getDisplayName()}**.`,
+              ephemeral: true
+            });
+          }
+        } else if (commandName === 'queue_map_remove') {
+          const mapName = interaction.options.getString('map', true);
+          const success = await targetQueue.removeMap(mapName);
+          if (success) {
+            await interaction.reply({
+              content: `Map **${mapName}** removed from queue **${targetQueue.getDisplayName()}**.`,
+              ephemeral: true
+            });
+          } else {
+            await interaction.reply({
+              content: `Map **${mapName}** could not be removed **${targetQueue.getDisplayName()}**.`,
+              ephemeral: true
+            });
+          }
         }
       }
     } catch (error) {

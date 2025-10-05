@@ -14,7 +14,7 @@ import {
 } from 'discord.js';
 import { IQueue, IMatchResult } from '../types';
 import { PlayerService } from './players';
-import { MatchmakingService } from './matchmaking';
+import { MatchmakingService, MatchmakingAlgorithm } from './matchmaking';
 import { MatchHandler } from './match_handler';
 import { Mutex } from '../utils/mutex';
 import { MessageUpdater } from '../utils/message_updater';
@@ -465,6 +465,43 @@ export class Queue {
 
   isDisabled(): boolean {
     return this.disabled;
+  }
+
+  async setAlgorithm(algorithm: MatchmakingAlgorithm): Promise<void> {
+    console.log(`Setting algorithm for queue ${this.config.displayName} to: ${algorithm}`);
+    this.config.matchmakingAlgorithm = algorithm;
+    // Update the queue message to reflect the new algorithm
+    await this.updateQueueMessage();
+    console.log(`Queue ${this.config.displayName} algorithm updated to ${algorithm}`);
+  }
+
+  async addMap(mapName: string): Promise<boolean> {
+    if (this.config.mapPool.includes(mapName)) {
+      console.log(`Map ${mapName} already exists in queue ${this.config.displayName}`);
+      return false;
+    }
+    console.log(`Adding map ${mapName} to queue ${this.config.displayName}`);
+    this.config.mapPool.push(mapName);
+    await this.updateQueueMessage();
+    console.log(`Map ${mapName} added to queue ${this.config.displayName}`);
+    return true;
+  }
+
+  async removeMap(mapName: string): Promise<boolean> {
+    const index = this.config.mapPool.indexOf(mapName);
+    if (index === -1) {
+      console.log(`Map ${mapName} not found in queue ${this.config.displayName}`);
+      return false;
+    }
+    if (this.config.mapPool.length <= 1) {
+      console.log(`Cannot remove map ${mapName} from queue ${this.config.displayName} - at least one map is required`);
+      return false;
+    }
+    console.log(`Removing map ${mapName} from queue ${this.config.displayName}`);
+    this.config.mapPool.splice(index, 1);
+    await this.updateQueueMessage();
+    console.log(`Map ${mapName} removed from queue ${this.config.displayName}`);
+    return true;
   }
 
   async shutdown(): Promise<void> {
