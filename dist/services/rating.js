@@ -152,6 +152,13 @@ class RatingService {
         }
         console.log(`Rating reset complete for gamemode ${this.gamemodeId}`);
     }
+    async predictWin(teamsWithPlayerRatings) {
+        // Convert RatingValue arrays to OpenSkill rating objects for each team
+        const teams = teamsWithPlayerRatings.map(teamRatings => teamRatings.map(playerRating => (0, openskill_1.rating)({ mu: playerRating.mu, sigma: playerRating.sigma })));
+        // Use OpenSkill's predict function to get win probabilities
+        // predict returns an array of probabilities, one for each team
+        return (0, openskill_1.predictWin)(teams);
+    }
 }
 exports.RatingService = RatingService;
 //# sourceMappingURL=rating.js.map

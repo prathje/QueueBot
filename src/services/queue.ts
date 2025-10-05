@@ -48,7 +48,7 @@ export class Queue {
     this.resultsChannel = resultsChannel;
     this.onMatchResult = onMatchResult || null;
     this.playerService = PlayerService.getInstance();
-    this.matchmakingService = new MatchmakingService();
+    this.matchmakingService = new MatchmakingService(config.gamemodeId);
   }
 
   async initialize(): Promise<void> {

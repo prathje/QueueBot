@@ -1,4 +1,4 @@
-import { IRating, IMatchResult, RatingValue } from '../types';
+import { IMatchResult, IRating, RatingValue } from '../types';
 export declare class RatingService {
     private gamemodeId;
     private ratingDefault;
@@ -38,5 +38,6 @@ export declare class RatingService {
      * Reset ratings by clearing existing ones and recomputing from historical match results
      */
     resetRatings(): Promise<void>;
+    predictWin(teamsWithPlayerRatings: (RatingValue[])[]): Promise<number[]>;
 }
 //# sourceMappingURL=rating.d.ts.map

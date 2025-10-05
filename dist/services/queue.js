@@ -26,7 +26,7 @@ class Queue {
         this.resultsChannel = resultsChannel;
         this.onMatchResult = onMatchResult || null;
         this.playerService = players_1.PlayerService.getInstance();
-        this.matchmakingService = new matchmaking_1.MatchmakingService();
+        this.matchmakingService = new matchmaking_1.MatchmakingService(config.gamemodeId);
     }
     async initialize() {
         await this.ensureChannel();

@@ -37,3 +37,20 @@ export function randomElement<T>(array: T[]): T {
   const randomIndex = Math.floor(Math.random() * array.length);
   return array[randomIndex];
 }
+
+/**
+ * Generates all possible combinations of elements from an array.
+ * @param array The array to generate combinations from
+ * @param size The size of each combination
+ * @returns An array of all possible combinations
+ */
+export function generateCombinations<T>(array: T[], size: number): T[][] {
+  if (size === 0) return [[]];
+  if (array.length === 0) return [];
+
+  const [first, ...rest] = array;
+  const withFirst = generateCombinations(rest, size - 1).map(combo => [first, ...combo]);
+  const withoutFirst = generateCombinations(rest, size);
+
+  return [...withFirst, ...withoutFirst];
+}

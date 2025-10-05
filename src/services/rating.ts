@@ -1,6 +1,6 @@
-import { Rating, MatchResult } from '../models';
-import { IRating, IMatchResult, RatingValue } from '../types';
-import { rating, rate, ordinal } from 'openskill';
+import {MatchResult, Rating} from '../models';
+import {IMatchResult, IRating, RatingValue} from '../types';
+import {ordinal, predictWin, rate, rating} from 'openskill';
 
 export class RatingService {
   private gamemodeId: string;
@@ -180,5 +180,18 @@ export class RatingService {
     }
 
     console.log(`Rating reset complete for gamemode ${this.gamemodeId}`);
+  }
+
+  async predictWin(teamsWithPlayerRatings: (RatingValue[])[] ): Promise<number[]> {
+    // Convert RatingValue arrays to OpenSkill rating objects for each team
+    const teams = teamsWithPlayerRatings.map(teamRatings =>
+      teamRatings.map(playerRating =>
+        rating({ mu: playerRating.mu, sigma: playerRating.sigma })
+      )
+    );
+
+    // Use OpenSkill's predict function to get win probabilities
+    // predict returns an array of probabilities, one for each team
+    return predictWin(teams);
   }
 }

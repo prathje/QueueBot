@@ -20,4 +20,11 @@ export declare function shuffled<T>(array: T[]): T[];
  * @returns A random element from the array
  */
 export declare function randomElement<T>(array: T[]): T;
+/**
+ * Generates all possible combinations of elements from an array.
+ * @param array The array to generate combinations from
+ * @param size The size of each combination
+ * @returns An array of all possible combinations
+ */
+export declare function generateCombinations<T>(array: T[], size: number): T[][];
 //# sourceMappingURL=index.d.ts.map

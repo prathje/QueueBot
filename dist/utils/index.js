@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.shuffle = shuffle;
 exports.shuffled = shuffled;
 exports.randomElement = randomElement;
+exports.generateCombinations = generateCombinations;
 /**
  * Shuffles an array in place and returns it.
  * Uses Fisher-Yates shuffle algorithm for uniform distribution.
@@ -38,5 +39,21 @@ function randomElement(array) {
     }
     const randomIndex = Math.floor(Math.random() * array.length);
     return array[randomIndex];
+}
+/**
+ * Generates all possible combinations of elements from an array.
+ * @param array The array to generate combinations from
+ * @param size The size of each combination
+ * @returns An array of all possible combinations
+ */
+function generateCombinations(array, size) {
+    if (size === 0)
+        return [[]];
+    if (array.length === 0)
+        return [];
+    const [first, ...rest] = array;
+    const withFirst = generateCombinations(rest, size - 1).map(combo => [first, ...combo]);
+    const withoutFirst = generateCombinations(rest, size);
+    return [...withFirst, ...withoutFirst];
 }
 //# sourceMappingURL=index.js.map
