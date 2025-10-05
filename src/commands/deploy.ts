@@ -8,7 +8,7 @@ export async function deployCommands(applicationId: string): Promise<void> {
   try {
     console.log('Started refreshing application (/) commands.');
 
-    const commandData = commands.map(command => command.data.toJSON());
+    const commandData = commands.map(command => command.toJSON());
 
     await rest.put(
       Routes.applicationGuildCommands(applicationId, config.discord.guildId),
