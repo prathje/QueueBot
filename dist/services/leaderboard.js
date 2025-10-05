@@ -110,7 +110,7 @@ class Leaderboard {
                 const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
                 // format (${entry.matches} matches) but if matches == 1 then "1 match"
                 const matchText = entry.matches === 1 ? '1 match' : `${entry.matches} matches`;
-                const ratingDisplay = `${entry.ordinal.toFixed(2).padStart(7, '\u2009')} (${matchText})`;
+                const ratingDisplay = `${entry.ordinal.toFixed(2)} (${matchText})`;
                 ranks.push(medal);
                 players.push(`<@${entry.player}>`);
                 ratings.push(ratingDisplay);
@@ -225,7 +225,7 @@ class Leaderboard {
     async getUserRank(userId) {
         try {
             // Get full leaderboard to find user's position
-            const leaderboard = await this.ratingService.getLeaderboard(1000); // Get more entries to find user
+            const leaderboard = await this.ratingService.getLeaderboard(1000); // Get more entries to find user, TODO: This is not nice!
             const userIndex = leaderboard.findIndex(entry => entry.player === userId);
             if (userIndex === -1) {
                 return null; // User not found on leaderboard
@@ -242,7 +242,7 @@ class Leaderboard {
     }
     createUserRankEmbed(userId, rank, entry) {
         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
-        const ratingDisplay = `${entry.ordinal.toFixed(2).padStart(7, '\u2009')}`;
+        const ratingDisplay = `${entry.ordinal.toFixed(2)}`;
         return new discord_js_1.EmbedBuilder()
             .setTitle(`Your Rank in ${this.gamemodeDisplayName}`)
             .setColor(0x00FF00)
@@ -265,7 +265,7 @@ class Leaderboard {
             const timestamp = Math.floor(date.getTime() / 1000);
             const dateString = `<t:${timestamp}:R>`;
             // Format ordinal diff with two decimal places and padding
-            const diffString = (entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(2)}` : `${entry.ordinalDiff.toFixed(2)}`).padStart(7, '\u2009');
+            const diffString = (entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(2)}` : `${entry.ordinalDiff.toFixed(2)}`);
             dates.push(dateString);
             diffs.push(diffString);
         });

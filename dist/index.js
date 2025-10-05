@@ -100,7 +100,7 @@ class TeeWorldsLeagueBot {
                     {
                         id: 'ctf_2v2',
                         displayName: 'CTF 2v2',
-                        mapPool: ['ctf3'],
+                        mapPool: ['ctf1_left', 'ctf_aurochs'],
                         playerCount: 4,
                         matchmakingAlgorithm: 'random teams'
                     },
@@ -109,6 +109,20 @@ class TeeWorldsLeagueBot {
                         displayName: 'CTF 3v3',
                         mapPool: ['ctf3'],
                         playerCount: 6,
+                        matchmakingAlgorithm: 'random teams'
+                    },
+                    {
+                        id: 'ctf_4v4',
+                        displayName: 'CTF 4v4',
+                        mapPool: ['ctf_infiltrate'],
+                        playerCount: 8,
+                        matchmakingAlgorithm: 'random teams'
+                    },
+                    {
+                        id: 'ctf_5v5',
+                        displayName: 'CTF 5v5',
+                        mapPool: ['ctf2'],
+                        playerCount: 10,
                         matchmakingAlgorithm: 'random teams'
                     }
                 ]
