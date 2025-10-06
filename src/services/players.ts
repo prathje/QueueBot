@@ -26,21 +26,21 @@ export class PlayerService {
             discordId: dbPlayer.discordId,
             username: dbPlayer.username,
             currentQueues: dbPlayer.currentQueues || [],
-            currentMatch: dbPlayer.currentMatch || null
+            currentMatch: dbPlayer.currentMatch || null,
           };
         } else {
           const newPlayer = new Player({
             discordId,
             username,
             currentQueues: [],
-            currentMatch: null
+            currentMatch: null,
           });
           await newPlayer.save();
           player = {
             discordId,
             username,
             currentQueues: [],
-            currentMatch: null
+            currentMatch: null,
           };
         }
         this.players.set(discordId, player);
@@ -84,8 +84,8 @@ export class PlayerService {
         {
           username: player.username,
           currentQueues: player.currentQueues,
-          currentMatch: player.currentMatch
-        }
+          currentMatch: player.currentMatch,
+        },
       );
       this.players.set(player.discordId, player);
     } catch (error) {
@@ -113,7 +113,7 @@ export class PlayerService {
     }
 
     const wasInQueue = player.currentQueues.includes(queueId);
-    player.currentQueues = player.currentQueues.filter(q => q !== queueId);
+    player.currentQueues = player.currentQueues.filter((q) => q !== queueId);
     await this.updatePlayer(player);
   }
 
@@ -122,13 +122,13 @@ export class PlayerService {
     const affectedQueues = new Set<string>();
 
     for (const discordId of discordIds) {
-        const player = await this.getPlayer(discordId);
-        if (player) {
-            player.currentQueues.forEach(queueId => affectedQueues.add(queueId));
-            player.currentQueues = [];
-            player.currentMatch = matchId;
-            await this.updatePlayer(player);
-        }
+      const player = await this.getPlayer(discordId);
+      if (player) {
+        player.currentQueues.forEach((queueId) => affectedQueues.add(queueId));
+        player.currentQueues = [];
+        player.currentMatch = matchId;
+        await this.updatePlayer(player);
+      }
     }
 
     // Notify affected queues to update their displays
@@ -145,7 +145,6 @@ export class PlayerService {
 
     await this.updatePlayer(player);
   }
-
 
   isPlayerInQueue(discordId: string, queueId: string): boolean {
     const player = this.players.get(discordId);
@@ -201,9 +200,9 @@ export class PlayerService {
         {
           $set: {
             currentQueues: [],
-            currentMatch: null
-          }
-        }
+            currentMatch: null,
+          },
+        },
       );
 
       console.log(`Reset ${result.modifiedCount} player states and cleared cache`);

@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import {IMatch, IQueue, MatchState, RatingValue} from '../types';
+import { IMatch, IQueue, MatchState, RatingValue } from '../types';
 import { PlayerService } from './players';
 import { RatingService } from './rating';
 import { shuffled, randomElement, generateCombinations } from '../utils';
@@ -7,7 +7,7 @@ import { ordinal } from 'openskill';
 
 export enum MatchmakingAlgorithm {
   RANDOM_TEAMS = 'random teams',
-  FAIR_TEAMS = 'fair teams'
+  FAIR_TEAMS = 'fair teams',
 }
 
 export class MatchmakingService {
@@ -45,11 +45,11 @@ export class MatchmakingService {
       votes: {
         team1: [],
         team2: [],
-        cancel: []
+        cancel: [],
       },
       createdAt: new Date(),
       startedAt: null,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     return match;
@@ -59,8 +59,10 @@ export class MatchmakingService {
     return shuffled(playersInQueue).slice(0, playerCount);
   }
 
-  private async createTeams(players: string[], algorithm: MatchmakingAlgorithm): Promise<{ team1: string[]; team2: string[] }> {
-
+  private async createTeams(
+    players: string[],
+    algorithm: MatchmakingAlgorithm,
+  ): Promise<{ team1: string[]; team2: string[] }> {
     if (algorithm === MatchmakingAlgorithm.FAIR_TEAMS) {
       try {
         return await this.createTeamsFair(players);
@@ -78,15 +80,14 @@ export class MatchmakingService {
 
     return {
       team1: shuffledPlayers.slice(0, teamSize),
-      team2: shuffledPlayers.slice(teamSize, teamSize * 2)
+      team2: shuffledPlayers.slice(teamSize, teamSize * 2),
     };
   }
 
   private async createTeamsFair(players: string[]): Promise<{ team1: string[]; team2: string[] }> {
-
     if (players.length <= 2) {
-        // For 2 or fewer players, just assign them randomly
-        return this.createTeamsRandom(players);
+      // For 2 or fewer players, just assign them randomly
+      return this.createTeamsRandom(players);
     }
 
     // Fair team creation algorithm
@@ -113,10 +114,10 @@ export class MatchmakingService {
     // Calculate rating differences for each combination
     for (const remainingTeam1 of remainingCombinations) {
       const team1 = [firstPlayer, ...remainingTeam1];
-      const team2 = players.filter(player => !team1.includes(player));
+      const team2 = players.filter((player) => !team1.includes(player));
 
-      const team1Ratings = team1.map(playerId => playerRatings.get(playerId)!);
-      const team2Ratings = team2.map(playerId => playerRatings.get(playerId)!);
+      const team1Ratings = team1.map((playerId) => playerRatings.get(playerId)!);
+      const team2Ratings = team2.map((playerId) => playerRatings.get(playerId)!);
 
       const winProbs: number[] = await this.ratingService.predictWin([team1Ratings, team2Ratings]);
 
@@ -125,11 +126,11 @@ export class MatchmakingService {
       const combination = {
         team1: team1,
         team2: team2,
-        probDiff: probDiff
+        probDiff: probDiff,
       };
 
       if (!bestCombination || combination.probDiff < bestCombination.probDiff) {
-          bestCombination = combination;
+        bestCombination = combination;
       }
 
       combinations.push(combination);
@@ -139,12 +140,12 @@ export class MatchmakingService {
     console.log(combinations);
 
     if (!bestCombination) {
-        console.log("No valid team combinations found, falling back to random teams.");
-        // Fallback to random teams if something goes wrong
-        return this.createTeamsRandom(players);
+      console.log('No valid team combinations found, falling back to random teams.');
+      // Fallback to random teams if something goes wrong
+      return this.createTeamsRandom(players);
     }
 
-    console.log("Selected teams with minimal win probability difference:", bestCombination);
+    console.log('Selected teams with minimal win probability difference:', bestCombination);
 
     // Randomly assign which team is team1 and which is team2
     const shouldSwap = Math.random() < 0.5;

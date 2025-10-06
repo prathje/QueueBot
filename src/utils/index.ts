@@ -49,7 +49,7 @@ export function generateCombinations<T>(array: T[], size: number): T[][] {
   if (array.length === 0) return [];
 
   const [first, ...rest] = array;
-  const withFirst = generateCombinations(rest, size - 1).map(combo => [first, ...combo]);
+  const withFirst = generateCombinations(rest, size - 1).map((combo) => [first, ...combo]);
   const withoutFirst = generateCombinations(rest, size);
 
   return [...withFirst, ...withoutFirst];

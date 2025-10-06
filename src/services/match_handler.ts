@@ -12,9 +12,9 @@ import {
   ButtonInteraction,
   Message,
   PermissionFlagsBits,
-  MessageFlags
+  MessageFlags,
 } from 'discord.js';
-import {IMatch, MatchState, TeamName, getTeamName, IMatchResult} from '../types';
+import { IMatch, MatchState, TeamName, getTeamName, IMatchResult } from '../types';
 import { Match } from '../models/Match';
 import { MatchResult } from '../models/MatchResult';
 import { PlayerService } from './players';
@@ -55,7 +55,7 @@ export class MatchHandler {
     onPlayersJoinQueue?: (playerIds: string[], queueId: string) => Promise<boolean>,
     onMatchClose?: (matchId: string) => void,
     resultsChannel?: TextChannel | null,
-    onMatchResult?: ((matchResult: IMatchResult) => Promise<void>) | null
+    onMatchResult?: ((matchResult: IMatchResult) => Promise<void>) | null,
   ) {
     this.client = client;
     this.guild = guild;
@@ -94,7 +94,7 @@ export class MatchHandler {
         discordVoiceChannel2Id: this.match.discordVoiceChannel2Id,
         readyPlayers: this.match.readyPlayers,
         votes: this.match.votes,
-        startedAt: this.match.startedAt
+        startedAt: this.match.startedAt,
       });
       await matchDoc.save();
     } catch (error) {
@@ -105,20 +105,23 @@ export class MatchHandler {
 
   private async updateMatch(): Promise<void> {
     try {
-      await Match.updateOne({ matchId: this.match.id }, {
-        queueId: this.match.queueId,
-        gamemodeId: this.match.gamemodeId,
-        players: this.match.players,
-        teams: this.match.teams,
-        map: this.match.map,
-        state: this.match.state,
-        discordChannelId: this.match.discordChannelId,
-        discordVoiceChannel1Id: this.match.discordVoiceChannel1Id,
-        discordVoiceChannel2Id: this.match.discordVoiceChannel2Id,
-        readyPlayers: this.match.readyPlayers,
-        votes: this.match.votes,
-        startedAt: this.match.startedAt
-      });
+      await Match.updateOne(
+        { matchId: this.match.id },
+        {
+          queueId: this.match.queueId,
+          gamemodeId: this.match.gamemodeId,
+          players: this.match.players,
+          teams: this.match.teams,
+          map: this.match.map,
+          state: this.match.state,
+          discordChannelId: this.match.discordChannelId,
+          discordVoiceChannel1Id: this.match.discordVoiceChannel1Id,
+          discordVoiceChannel2Id: this.match.discordVoiceChannel2Id,
+          readyPlayers: this.match.readyPlayers,
+          votes: this.match.votes,
+          startedAt: this.match.startedAt,
+        },
+      );
     } catch (error) {
       console.error('Error updating match:', error);
     }
@@ -135,17 +138,21 @@ export class MatchHandler {
         permissionOverwrites: [
           {
             id: this.guild.roles.everyone.id,
-            deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
+            deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
           },
           {
             id: this.client.user!.id,
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels]
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ManageChannels,
+            ],
           },
-          ...this.match.players.map(playerId => ({
+          ...this.match.players.map((playerId) => ({
             id: playerId,
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages]
-          }))
-        ]
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+          })),
+        ],
       });
 
       this.match.discordChannelId = this.channel.id;
@@ -153,7 +160,6 @@ export class MatchHandler {
 
       // Send private messages to all players with match channel link
       await this.notifyPlayersOfMatchChannel();
-
     } catch (error) {
       console.error('Error creating match channel:', error);
       throw error;
@@ -171,17 +177,17 @@ export class MatchHandler {
         permissionOverwrites: [
           {
             id: this.guild.roles.everyone.id,
-            deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
+            deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
           },
           {
             id: this.client.user!.id,
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.ManageChannels]
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.ManageChannels],
           },
-          ...this.match.teams.team1.map(playerId => ({
+          ...this.match.teams.team1.map((playerId) => ({
             id: playerId,
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
-          }))
-        ]
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
+          })),
+        ],
       });
 
       this.voiceChannel2 = await this.guild.channels.create({
@@ -191,17 +197,17 @@ export class MatchHandler {
         permissionOverwrites: [
           {
             id: this.guild.roles.everyone.id,
-            deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
+            deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
           },
           {
             id: this.client.user!.id,
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.ManageChannels]
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.ManageChannels],
           },
-          ...this.match.teams.team2.map(playerId => ({
+          ...this.match.teams.team2.map((playerId) => ({
             id: playerId,
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect]
-          }))
-        ]
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
+          })),
+        ],
       });
 
       this.match.discordVoiceChannel1Id = this.voiceChannel1.id;
@@ -223,7 +229,7 @@ export class MatchHandler {
     try {
       const messageOptions: any = {
         content: `Match found! <@${this.match.players.join('> <@')}>`,
-        embeds: [embed]
+        embeds: [embed],
       };
 
       if (buttons) {
@@ -245,14 +251,18 @@ export class MatchHandler {
     const embed = new EmbedBuilder()
       .setTitle(`Match ${this.match.id.slice(0, 8)}`)
       .setDescription(`Map: **${this.match.map}**`)
-      .setColor(0x0099FF)
+      .setColor(0x0099ff)
       .setTimestamp();
 
     if (this.match.state === MatchState.READY_UP) {
       embed.addFields(
-        { name: TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
-        { name: TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true },
-        { name: 'Ready Players', value: `${this.match.readyPlayers.length}/${this.match.players.length}`, inline: true }
+        { name: TeamName.TEAM1, value: this.match.teams.team1.map((id) => `<@${id}>`).join('\n'), inline: true },
+        { name: TeamName.TEAM2, value: this.match.teams.team2.map((id) => `<@${id}>`).join('\n'), inline: true },
+        {
+          name: 'Ready Players',
+          value: `${this.match.readyPlayers.length}/${this.match.players.length}`,
+          inline: true,
+        },
       );
     } else if (this.match.state === MatchState.IN_PROGRESS) {
       const team1Votes = this.match.votes.team1.length;
@@ -260,9 +270,13 @@ export class MatchHandler {
       const cancelVotes = this.match.votes.cancel.length;
 
       embed.addFields(
-        { name: TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
-        { name: TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true },
-        { name: 'Votes', value: `${TeamName.TEAM1}: ${team1Votes}\n${TeamName.TEAM2}: ${team2Votes}\nCancel: ${cancelVotes}`, inline: true }
+        { name: TeamName.TEAM1, value: this.match.teams.team1.map((id) => `<@${id}>`).join('\n'), inline: true },
+        { name: TeamName.TEAM2, value: this.match.teams.team2.map((id) => `<@${id}>`).join('\n'), inline: true },
+        {
+          name: 'Votes',
+          value: `${TeamName.TEAM1}: ${team1Votes}\n${TeamName.TEAM2}: ${team2Votes}\nCancel: ${cancelVotes}`,
+          inline: true,
+        },
       );
     } else if (this.match.state === MatchState.COMPLETED) {
       const team1Votes = this.match.votes.team1.length;
@@ -270,19 +284,23 @@ export class MatchHandler {
       const winningTeam = team1Votes > team2Votes ? 1 : 2;
 
       embed
-        .setColor(0xFFD700)
+        .setColor(0xffd700)
         .addFields(
-          { name: TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
-          { name: TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true },
-          { name: '🏆 Result', value: `**${getTeamName(winningTeam)} Wins!**\n\nFinal Votes:\n${TeamName.TEAM1}: ${team1Votes}\n${TeamName.TEAM2}: ${team2Votes}`, inline: true }
+          { name: TeamName.TEAM1, value: this.match.teams.team1.map((id) => `<@${id}>`).join('\n'), inline: true },
+          { name: TeamName.TEAM2, value: this.match.teams.team2.map((id) => `<@${id}>`).join('\n'), inline: true },
+          {
+            name: '🏆 Result',
+            value: `**${getTeamName(winningTeam)} Wins!**\n\nFinal Votes:\n${TeamName.TEAM1}: ${team1Votes}\n${TeamName.TEAM2}: ${team2Votes}`,
+            inline: true,
+          },
         );
     } else if (this.match.state === MatchState.CANCELLED) {
       embed
-        .setColor(0xFF0000)
+        .setColor(0xff0000)
         .addFields(
-          { name: TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
-          { name: TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true },
-          { name: '❌ Status', value: '**Match Cancelled**\n\nVoting is no longer available.', inline: true }
+          { name: TeamName.TEAM1, value: this.match.teams.team1.map((id) => `<@${id}>`).join('\n'), inline: true },
+          { name: TeamName.TEAM2, value: this.match.teams.team2.map((id) => `<@${id}>`).join('\n'), inline: true },
+          { name: '❌ Status', value: '**Match Cancelled**\n\nVoting is no longer available.', inline: true },
         );
     }
 
@@ -290,60 +308,47 @@ export class MatchHandler {
   }
 
   private createMatchButtons(): ActionRowBuilder<ButtonBuilder> | null {
-
     const refreshButton = new ButtonBuilder()
-        .setCustomId(`refresh_match_${this.match.id}`)
-        .setLabel('🔄 Refresh')
-        .setStyle(ButtonStyle.Secondary);
+      .setCustomId(`refresh_match_${this.match.id}`)
+      .setLabel('🔄 Refresh')
+      .setStyle(ButtonStyle.Secondary);
 
     if (this.match.state === MatchState.READY_UP) {
-      return new ActionRowBuilder<ButtonBuilder>()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId(`ready_${this.match.id}`)
-            .setLabel('Ready Up!')
-            .setStyle(ButtonStyle.Success),
-            refreshButton
-        );
+      return new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId(`ready_${this.match.id}`).setLabel('Ready Up!').setStyle(ButtonStyle.Success),
+        refreshButton,
+      );
     } else if (this.match.state === MatchState.IN_PROGRESS) {
-      const row1 = new ActionRowBuilder<ButtonBuilder>()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId(`vote_team1_${this.match.id}`)
-            .setLabel(`${TeamName.TEAM1} Wins`)
-            .setStyle(ButtonStyle.Danger),
-          new ButtonBuilder()
-            .setCustomId(`vote_team2_${this.match.id}`)
-            .setLabel(`${TeamName.TEAM2} Wins`)
-            .setStyle(ButtonStyle.Primary),
-          new ButtonBuilder()
-            .setCustomId(`vote_cancel_${this.match.id}`)
-            .setLabel('Cancel Match')
-            .setStyle(ButtonStyle.Secondary)
-        );
+      const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`vote_team1_${this.match.id}`)
+          .setLabel(`${TeamName.TEAM1} Wins`)
+          .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+          .setCustomId(`vote_team2_${this.match.id}`)
+          .setLabel(`${TeamName.TEAM2} Wins`)
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`vote_cancel_${this.match.id}`)
+          .setLabel('Cancel Match')
+          .setStyle(ButtonStyle.Secondary),
+      );
 
-      const row2 = new ActionRowBuilder<ButtonBuilder>()
-        .addComponents(
-            refreshButton
-        );
+      const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(refreshButton);
 
       return [row1, row2] as any; // Return multiple rows for voting phase
     } else if (this.match.state === MatchState.COMPLETED || this.match.state === MatchState.CANCELLED) {
-
-      if (this.onPlayersJoinQueue) { // we only show autojoin if we have a callback to rejoin!
-        return new ActionRowBuilder<ButtonBuilder>()
-          .addComponents(
-            new ButtonBuilder()
-              .setCustomId(`autojoin_queue_${this.match.id}`)
-              .setLabel('🔄 Auto-join Next Queue')
-              .setStyle(ButtonStyle.Secondary),
-              refreshButton
-          );
+      if (this.onPlayersJoinQueue) {
+        // we only show autojoin if we have a callback to rejoin!
+        return new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`autojoin_queue_${this.match.id}`)
+            .setLabel('🔄 Auto-join Next Queue')
+            .setStyle(ButtonStyle.Secondary),
+          refreshButton,
+        );
       } else {
-        return new ActionRowBuilder<ButtonBuilder>()
-          .addComponents(
-              refreshButton
-          );
+        return new ActionRowBuilder<ButtonBuilder>().addComponents(refreshButton);
       }
     }
 
@@ -351,7 +356,6 @@ export class MatchHandler {
   }
 
   private setupInteractionHandlers(): void {
-
     const m = new Mutex();
 
     this.interactionListener = async (interaction) => {
@@ -393,7 +397,7 @@ export class MatchHandler {
       if (!this.match.players.includes(user.id)) {
         await interaction.reply({
           content: 'You were not in this match!',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -404,22 +408,21 @@ export class MatchHandler {
         this.queueAutojoin.delete(user.id);
         await interaction.reply({
           content: '❌ Removed from auto-join list. You will not automatically rejoin the queue.',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
       } else {
         // Add to autojoin
         this.queueAutojoin.add(user.id);
         await interaction.reply({
           content: '✅ Added to auto-join list! You will automatically rejoin the queue when this match closes.',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
       }
-
     } catch (error) {
       console.error('Error handling autojoin registration:', error);
       await interaction.reply({
         content: 'An error occurred while registering for auto-join.',
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
     }
   }
@@ -430,14 +433,13 @@ export class MatchHandler {
 
       await interaction.reply({
         content: '🔄 Refreshed!',
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
-
     } catch (error) {
       console.error('Error handling match refresh:', error);
       await interaction.reply({
         content: 'An error occurred while refreshing the match.',
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
     }
   }
@@ -459,7 +461,7 @@ export class MatchHandler {
       if (!this.match.players.includes(user.id)) {
         await interaction.reply({
           content: 'You are not in this match!',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -467,7 +469,7 @@ export class MatchHandler {
       if (this.match.readyPlayers.includes(user.id)) {
         await interaction.reply({
           content: 'You are already ready!',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         await this.updateMatchMessage();
         return;
@@ -476,7 +478,7 @@ export class MatchHandler {
       this.match.readyPlayers.push(user.id);
       await interaction.reply({
         content: 'You are ready!',
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
 
       if (this.match.readyPlayers.length === this.match.players.length) {
@@ -489,7 +491,7 @@ export class MatchHandler {
       console.error('Error handling ready:', error);
       await interaction.reply({
         content: 'An error occurred while readying up.',
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
       await this.updateMatchMessage();
     }
@@ -509,9 +511,11 @@ export class MatchHandler {
     if (this.channel) {
       await this.channel.send({
         content: '🎮 **Match started!** Good luck and have fun!',
-        embeds: [/*new EmbedBuilder()
+        embeds: [
+          /*new EmbedBuilder()
           .setDescription(`Voice channels have been created for your teams.`)
-          .setColor(0x00FF00)*/]
+          .setColor(0x00FF00)*/
+        ],
       });
     }
 
@@ -527,7 +531,7 @@ export class MatchHandler {
       if (!this.match.players.includes(user.id)) {
         await interaction.reply({
           content: 'You are not in this match!',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -536,16 +540,16 @@ export class MatchHandler {
       if (this.match.state !== MatchState.IN_PROGRESS) {
         await interaction.reply({
           content: 'Voting is no longer available for this match!',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         await this.updateMatchMessage();
         return;
       }
 
       // Remove user's previous vote if they had one
-      this.match.votes.team1 = this.match.votes.team1.filter(id => id !== user.id);
-      this.match.votes.team2 = this.match.votes.team2.filter(id => id !== user.id);
-      this.match.votes.cancel = this.match.votes.cancel.filter(id => id !== user.id);
+      this.match.votes.team1 = this.match.votes.team1.filter((id) => id !== user.id);
+      this.match.votes.team2 = this.match.votes.team2.filter((id) => id !== user.id);
+      this.match.votes.cancel = this.match.votes.cancel.filter((id) => id !== user.id);
 
       // Add new vote
       this.match.votes[voteType].push(user.id);
@@ -554,7 +558,7 @@ export class MatchHandler {
 
       await interaction.reply({
         content: `You voted for ${voteLabels[voteType]}!`,
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
 
       await this.checkVoteResults();
@@ -562,7 +566,7 @@ export class MatchHandler {
       console.error('Error handling vote:', error);
       await interaction.reply({
         content: 'An error occurred while voting.',
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
     }
   }
@@ -627,12 +631,12 @@ export class MatchHandler {
       map: this.match.map,
       teams: {
         team1: this.match.teams.team1,
-        team2: this.match.teams.team2
+        team2: this.match.teams.team2,
       },
       players: this.match.players,
       displayNames,
       startedAt: this.match.startedAt || new Date(), // Fallback to current time if somehow null
-      completedAt: new Date()
+      completedAt: new Date(),
     });
 
     try {
@@ -647,9 +651,7 @@ export class MatchHandler {
     if (this.channel) {
       await this.channel.send({
         content: `🏆 **Match completed!** ${getTeamName(winningTeam)} wins!`,
-        embeds: [new EmbedBuilder()
-          .setDescription('GG! The match will be closed in 10 seconds.')
-          .setColor(0xFFD700)]
+        embeds: [new EmbedBuilder().setDescription('GG! The match will be closed in 10 seconds.').setColor(0xffd700)],
       });
     }
 
@@ -707,7 +709,7 @@ export class MatchHandler {
 
       const webhookData = {
         ...cleanedData,
-        server: "queue"
+        server: 'queue',
       };
 
       console.log('Webhook payload:', JSON.stringify(webhookData, null, 2));
@@ -717,7 +719,7 @@ export class MatchHandler {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(webhookData)
+        body: JSON.stringify(webhookData),
       });
 
       if (response.ok) {
@@ -747,9 +749,11 @@ export class MatchHandler {
     if (this.channel) {
       await this.channel.send({
         content: `❌ **Match cancelled:** ${reason}`,
-        embeds: [new EmbedBuilder()
-          .setDescription('You can join queues once this match closes. The match will be closed in 10 seconds.')
-          .setColor(0xFF0000)]
+        embeds: [
+          new EmbedBuilder()
+            .setDescription('You can join queues once this match closes. The match will be closed in 10 seconds.')
+            .setColor(0xff0000),
+        ],
       });
     }
 
@@ -764,7 +768,6 @@ export class MatchHandler {
   }
 
   private async closeMatch(): Promise<void> {
-
     // Clear any timeouts
     if (this.readyTimeout) {
       clearTimeout(this.readyTimeout);
@@ -836,7 +839,9 @@ export class MatchHandler {
           const autojoinPlayers = Array.from(this.queueAutojoin);
           const success = await this.onPlayersJoinQueue(autojoinPlayers, this.match.queueId);
           if (success) {
-            console.log(`Successfully processed batch autojoin for ${autojoinPlayers.length} players to queue ${this.match.queueId}`);
+            console.log(
+              `Successfully processed batch autojoin for ${autojoinPlayers.length} players to queue ${this.match.queueId}`,
+            );
           } else {
             console.log(`Batch autojoin failed for players in queue ${this.match.queueId}`);
           }
@@ -855,7 +860,7 @@ export class MatchHandler {
 
     const messageOptions: any = {
       content: `Match found! <@${this.match.players.join('> <@')}>`,
-      embeds: [embed]
+      embeds: [embed],
     };
 
     if (buttons) {
@@ -907,10 +912,12 @@ export class MatchHandler {
       try {
         await this.channel.send({
           content: `❌ **Match force cancelled:** ${reason}`,
-          embeds: [{
-            description: 'This match was cancelled by an administrator. You can join queues once this match closes.',
-            color: 0xFF0000
-          }]
+          embeds: [
+            {
+              description: 'This match was cancelled by an administrator. You can join queues once this match closes.',
+              color: 0xff0000,
+            },
+          ],
         });
       } catch (error) {
         console.error('Error sending force cancel message:', error);
@@ -938,14 +945,14 @@ export class MatchHandler {
           .addFields(
             { name: 'Match ID', value: this.match.id.slice(0, 8), inline: true },
             { name: 'Map', value: this.match.map, inline: true },
-            { name: 'Players', value: `${this.match.players.length} players`, inline: true }
+            { name: 'Players', value: `${this.match.players.length} players`, inline: true },
           )
-          .setColor(0x00FF00)
+          .setColor(0x00ff00)
           .setTimestamp();
 
         const notificationMessage = await user.send({
           content: `**Match Found:** ${channelLink}`,
-          embeds: [embed]
+          embeds: [embed],
         });
 
         // Store the message reference for later deletion
@@ -953,7 +960,10 @@ export class MatchHandler {
 
         console.log(`Sent match notification to ${user.username} (${playerId})`);
       } catch (error) {
-        console.log(`Could not send match notification to player ${playerId}:`, error instanceof Error ? error.message : String(error));
+        console.log(
+          `Could not send match notification to player ${playerId}:`,
+          error instanceof Error ? error.message : String(error),
+        );
       }
     }
   }
@@ -970,14 +980,19 @@ export class MatchHandler {
         await this.updatePlayerNotificationWithStatus(playerId, message);
         console.log(`Updated notification message for player ${playerId} with match status`);
       } catch (error) {
-        console.log(`Could not update notification message for player ${playerId}:`, error instanceof Error ? error.message : String(error));
+        console.log(
+          `Could not update notification message for player ${playerId}:`,
+          error instanceof Error ? error.message : String(error),
+        );
       }
     }
 
     this.playerNotificationMessages.clear();
   }
 
-  private async buildMatchNotificationMessage(playerId: string | null): Promise<{ content: string, embeds: EmbedBuilder[] }> {
+  private async buildMatchNotificationMessage(
+    playerId: string | null,
+  ): Promise<{ content: string; embeds: EmbedBuilder[] }> {
     let statusTitle: string;
     let statusDescription: string;
     let statusColor: number;
@@ -996,17 +1011,17 @@ export class MatchHandler {
             if (isWinner) {
               statusTitle = 'Match Won! 🎉';
               statusDescription = `Congratulations! You won the match!`;
-              statusColor = 0x00FF00; // Green
+              statusColor = 0x00ff00; // Green
             } else {
               statusTitle = 'Match Lost 😞';
               statusDescription = `You lost the match. Better luck next time!`;
-              statusColor = 0xFF0000; // Red
+              statusColor = 0xff0000; // Red
             }
           } else {
             // Results channel message
             statusTitle = 'Match Completed 🏆';
             statusDescription = `Match ${this.match.id.slice(0, 8)} has finished!`;
-            statusColor = 0xFFD700; // Gold
+            statusColor = 0xffd700; // Gold
           }
           result = `${getTeamName(matchResult.winningTeam)} won`;
         } else {
@@ -1018,7 +1033,7 @@ export class MatchHandler {
             statusTitle = 'Match Completed ✅';
             statusDescription = `Match ${this.match.id.slice(0, 8)} has finished!`;
           }
-          statusColor = 0x0099FF; // Blue
+          statusColor = 0x0099ff; // Blue
           result = 'Match completed';
         }
       } catch (error) {
@@ -1030,7 +1045,7 @@ export class MatchHandler {
           statusTitle = '✅ Match Completed';
           statusDescription = `Match ${this.match.id.slice(0, 8)} has finished!`;
         }
-        statusColor = 0x0099FF; // Blue
+        statusColor = 0x0099ff; // Blue
         result = 'Match completed';
       }
     } else if (this.match.state === MatchState.CANCELLED) {
@@ -1041,7 +1056,7 @@ export class MatchHandler {
         statusTitle = 'Match Cancelled ❌';
         statusDescription = `Match ${this.match.id.slice(0, 8)} was cancelled.`;
       }
-      statusColor = 0xFFA500; // Orange
+      statusColor = 0xffa500; // Orange
       result = 'Match cancelled';
     } else {
       if (playerId) {
@@ -1059,11 +1074,11 @@ export class MatchHandler {
       .setTitle(statusTitle)
       .setDescription(statusDescription)
       .addFields(
-        { name: 'Match ID', value: this.match.id.slice(0, 8), inline: true},
-        { name: 'Map', value: this.match.map, inline: true},
-        { name: 'Result', value: result, inline: true},
-        { name: TeamName.TEAM1, value: this.match.teams.team1.map(id => `<@${id}>`).join('\n'), inline: true },
-        { name: TeamName.TEAM2, value: this.match.teams.team2.map(id => `<@${id}>`).join('\n'), inline: true }
+        { name: 'Match ID', value: this.match.id.slice(0, 8), inline: true },
+        { name: 'Map', value: this.match.map, inline: true },
+        { name: 'Result', value: result, inline: true },
+        { name: TeamName.TEAM1, value: this.match.teams.team1.map((id) => `<@${id}>`).join('\n'), inline: true },
+        { name: TeamName.TEAM2, value: this.match.teams.team2.map((id) => `<@${id}>`).join('\n'), inline: true },
       )
       .setColor(statusColor)
       .setTimestamp();
@@ -1091,8 +1106,15 @@ export class MatchHandler {
     }
   }
 
-
-  static async cleanupMatchChannels(guild: Guild, match: { matchId: string; discordChannelId: string | null; discordVoiceChannel1Id: string | null; discordVoiceChannel2Id: string | null }): Promise<number> {
+  static async cleanupMatchChannels(
+    guild: Guild,
+    match: {
+      matchId: string;
+      discordChannelId: string | null;
+      discordVoiceChannel1Id: string | null;
+      discordVoiceChannel2Id: string | null;
+    },
+  ): Promise<number> {
     let deletedChannels = 0;
 
     try {

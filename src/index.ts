@@ -20,17 +20,20 @@ class QueueBot {
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.MessageContent
-      ]
+        GatewayIntentBits.MessageContent,
+      ],
     });
 
     // Increase max listeners to prevent memory leak warnings
     this.client.setMaxListeners(0);
 
-    setInterval(() => {
-      const listenerCount = this.client.listenerCount('interactionCreate');
-      console.log(`Current interactionCreate listeners: ${listenerCount}`);
-    }, 60*60*1000); // Log every hour
+    setInterval(
+      () => {
+        const listenerCount = this.client.listenerCount('interactionCreate');
+        console.log(`Current interactionCreate listeners: ${listenerCount}`);
+      },
+      60 * 60 * 1000,
+    ); // Log every hour
 
     this.setupEventHandlers();
   }
@@ -95,18 +98,37 @@ class QueueBot {
           {
             id: 'gctf_2v2',
             displayName: 'gCTF 2v2',
-            mapPool: ['ctf3', 'ctf4_old', 'ctf_cryochasm', 'ctf_5_limited', 'ctf_duskwood', 'ctf_tantum', 'ctf_mine', 'ctf_planet', 'ctf_ambiance'],
+            mapPool: [
+              'ctf3',
+              'ctf4_old',
+              'ctf_cryochasm',
+              'ctf_5_limited',
+              'ctf_duskwood',
+              'ctf_tantum',
+              'ctf_mine',
+              'ctf_planet',
+              'ctf_ambiance',
+            ],
             playerCount: 4,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS,
           },
           {
             id: 'gctf_3v3',
             displayName: 'gCTF 3v3',
-            mapPool: ['ctf2', 'ctf_5_limited', 'ctf_duskwood', 'ctf_mars', 'ctf_moon', 'ctf_chryochasm', 'ctf_exeliar', 'ctf_gartum'],
+            mapPool: [
+              'ctf2',
+              'ctf_5_limited',
+              'ctf_duskwood',
+              'ctf_mars',
+              'ctf_moon',
+              'ctf_chryochasm',
+              'ctf_exeliar',
+              'ctf_gartum',
+            ],
             playerCount: 6,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
-          }
-        ]
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS,
+          },
+        ],
       },
       {
         id: 'ctf',
@@ -117,30 +139,30 @@ class QueueBot {
             displayName: 'CTF 2v2',
             mapPool: ['ctf1_left', 'ctf_aurochs'],
             playerCount: 4,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS,
           },
           {
             id: 'ctf_3v3',
             displayName: 'CTF 3v3',
             mapPool: ['ctf3'],
             playerCount: 6,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS,
           },
           {
             id: 'ctf_4v4',
             displayName: 'CTF 4v4',
             mapPool: ['ctf_infiltrate'],
             playerCount: 8,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS,
           },
           {
             id: 'ctf_5v5',
             displayName: 'CTF 5v5',
             mapPool: ['ctf2'],
             playerCount: 10,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
-          }
-        ]
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS,
+          },
+        ],
       },
       {
         id: 'dm',
@@ -151,9 +173,9 @@ class QueueBot {
             displayName: 'DM 1v1',
             mapPool: ['dm1'],
             playerCount: 2,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
-          }
-        ]
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS,
+          },
+        ],
       },
       {
         id: 'test',
@@ -164,17 +186,17 @@ class QueueBot {
             displayName: 'Test 1 Player',
             mapPool: ['ctf_test'],
             playerCount: 1,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS,
           },
           {
             id: 'test-2',
             displayName: 'Test 2 Players',
             mapPool: ['ctf_test'],
             playerCount: 2,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
-          }
-        ]
-      }
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS,
+          },
+        ],
+      },
     ];
 
     for (const gamemodeConfig of gamemodeConfigs) {
@@ -195,9 +217,13 @@ class QueueBot {
     try {
       const { commandName, channelId } = interaction;
 
-      if (commandName === 'queue_disable' || commandName === 'queue_enable' ||
-          commandName === 'queue_set_algorithm' ||
-          commandName === 'queue_map_add' || commandName === 'queue_map_remove') {
+      if (
+        commandName === 'queue_disable' ||
+        commandName === 'queue_enable' ||
+        commandName === 'queue_set_algorithm' ||
+        commandName === 'queue_map_add' ||
+        commandName === 'queue_map_remove'
+      ) {
         // Find the queue that matches this channel
         let targetQueue = null;
         for (const gamemode of this.gamemodes.values()) {
@@ -211,7 +237,7 @@ class QueueBot {
         if (!targetQueue) {
           await interaction.reply({
             content: 'This command can only be used in a queue channel.',
-            ephemeral: true
+            ephemeral: true,
           });
           return;
         }
@@ -220,23 +246,24 @@ class QueueBot {
           await targetQueue.disable();
           await interaction.reply({
             content: `Queue **${targetQueue.getDisplayName()}** has been disabled. All players have been removed.`,
-            ephemeral: true
+            ephemeral: true,
           });
         } else if (commandName === 'queue_enable') {
           await targetQueue.enable();
           await interaction.reply({
             content: `Queue **${targetQueue.getDisplayName()}** has been enabled.`,
-            ephemeral: true
+            ephemeral: true,
           });
         } else if (commandName === 'queue_set_algorithm') {
           const algorithmChoice = interaction.options.getString('algorithm', true);
-          const algorithm = algorithmChoice === 'random teams' ? MatchmakingAlgorithm.RANDOM_TEAMS : MatchmakingAlgorithm.FAIR_TEAMS;
+          const algorithm =
+            algorithmChoice === 'random teams' ? MatchmakingAlgorithm.RANDOM_TEAMS : MatchmakingAlgorithm.FAIR_TEAMS;
           const displayName = algorithmChoice === 'random teams' ? 'Random Teams' : 'Fair Teams';
 
           await targetQueue.setAlgorithm(algorithm);
           await interaction.reply({
             content: `Queue **${targetQueue.getDisplayName()}** algorithm set to **${displayName}**.`,
-            ephemeral: true
+            ephemeral: true,
           });
         } else if (commandName === 'queue_map_add') {
           const mapName = interaction.options.getString('map', true);
@@ -244,12 +271,12 @@ class QueueBot {
           if (success) {
             await interaction.reply({
               content: `Map **${mapName}** added to queue **${targetQueue.getDisplayName()}**.`,
-              ephemeral: true
+              ephemeral: true,
             });
           } else {
             await interaction.reply({
               content: `Map **${mapName}** is already in the map pool for queue **${targetQueue.getDisplayName()}**.`,
-              ephemeral: true
+              ephemeral: true,
             });
           }
         } else if (commandName === 'queue_map_remove') {
@@ -258,12 +285,12 @@ class QueueBot {
           if (success) {
             await interaction.reply({
               content: `Map **${mapName}** removed from queue **${targetQueue.getDisplayName()}**.`,
-              ephemeral: true
+              ephemeral: true,
             });
           } else {
             await interaction.reply({
               content: `Map **${mapName}** could not be removed **${targetQueue.getDisplayName()}**.`,
-              ephemeral: true
+              ephemeral: true,
             });
           }
         }
@@ -272,7 +299,7 @@ class QueueBot {
       console.error('Error handling slash command:', error);
       await interaction.reply({
         content: 'An error occurred while executing the command.',
-        ephemeral: true
+        ephemeral: true,
       });
     }
   }
@@ -299,7 +326,7 @@ class QueueBot {
       }
 
       // Give a moment for the queue messages to be updated
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       this.client.destroy();
       console.log('Bot shutdown complete');
@@ -309,7 +336,6 @@ class QueueBot {
       process.exit(1);
     }
   }
-
 }
 
 const bot = new QueueBot();

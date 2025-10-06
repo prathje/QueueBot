@@ -3,10 +3,13 @@ import { IRating } from '../types';
 
 interface IRatingDocument extends IRating, Document {}
 
-const RatingValueSchema = new Schema({
-  mu: { type: Number, required: true },
-  sigma: { type: Number, required: true }
-}, { _id: false });
+const RatingValueSchema = new Schema(
+  {
+    mu: { type: Number, required: true },
+    sigma: { type: Number, required: true },
+  },
+  { _id: false },
+);
 
 const RatingSchema = new Schema<IRatingDocument>({
   player: { type: String, required: true },
@@ -17,7 +20,7 @@ const RatingSchema = new Schema<IRatingDocument>({
   after: { type: RatingValueSchema, required: true },
   ordinalBefore: { type: Number, required: true },
   ordinalAfter: { type: Number, required: true },
-  ordinalDiff: { type: Number, required: true }
+  ordinalDiff: { type: Number, required: true },
 });
 
 // Index for efficient queries

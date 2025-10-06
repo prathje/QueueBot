@@ -1,4 +1,17 @@
-import { Client, TextChannel, EmbedBuilder, CategoryChannel, ChannelType, Guild, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, MessageFlags } from 'discord.js';
+import {
+  Client,
+  TextChannel,
+  EmbedBuilder,
+  CategoryChannel,
+  ChannelType,
+  Guild,
+  PermissionFlagsBits,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ButtonInteraction,
+  MessageFlags,
+} from 'discord.js';
 import { RatingService } from './rating';
 import { MessageUpdater } from '../utils/message_updater';
 
@@ -13,7 +26,7 @@ export class Leaderboard {
   private interactionListener: ((interaction: any) => Promise<void>) | null = null;
 
   private getNumberWithOrdinal(n: number): string {
-    const s = ["th", "st", "nd", "rd"];
+    const s = ['th', 'st', 'nd', 'rd'];
     const v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   }
@@ -23,7 +36,7 @@ export class Leaderboard {
     guild: Guild,
     ratingService: RatingService,
     gamemodeId: string,
-    gamemodeDisplayName: string
+    gamemodeDisplayName: string,
   ) {
     this.client = client;
     this.guild = guild;
@@ -37,9 +50,7 @@ export class Leaderboard {
       const channelName = `${this.gamemodeId}-leaderboard`;
 
       let leaderboardChannel = this.guild.channels.cache.find(
-        ch => ch.name === channelName &&
-              ch.type === ChannelType.GuildText &&
-              ch.parentId === category.id
+        (ch) => ch.name === channelName && ch.type === ChannelType.GuildText && ch.parentId === category.id,
       ) as TextChannel;
 
       if (!leaderboardChannel) {
@@ -51,13 +62,22 @@ export class Leaderboard {
             {
               id: this.guild.roles.everyone.id,
               allow: [PermissionFlagsBits.ViewChannel],
-              deny: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.CreatePublicThreads, PermissionFlagsBits.CreatePrivateThreads]
+              deny: [
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.CreatePublicThreads,
+                PermissionFlagsBits.CreatePrivateThreads,
+              ],
             },
             {
               id: this.client.user!.id,
-              allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ManageMessages]
-            }
-          ]
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ManageChannels,
+                PermissionFlagsBits.ManageMessages,
+              ],
+            },
+          ],
         });
         console.log(`Created leaderboard channel: ${channelName}`);
       } else {
@@ -66,12 +86,21 @@ export class Leaderboard {
           {
             id: this.guild.roles.everyone.id,
             allow: [PermissionFlagsBits.ViewChannel],
-            deny: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.CreatePublicThreads, PermissionFlagsBits.CreatePrivateThreads]
+            deny: [
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.CreatePublicThreads,
+              PermissionFlagsBits.CreatePrivateThreads,
+            ],
           },
           {
             id: this.client.user!.id,
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ManageMessages]
-          }
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ManageChannels,
+              PermissionFlagsBits.ManageMessages,
+            ],
+          },
         ]);
         console.log(`Updated permissions for existing leaderboard channel: ${channelName}`);
       }
@@ -100,10 +129,11 @@ export class Leaderboard {
       const messages = await this.leaderboardChannel.messages.fetch({ limit: 10 });
 
       // Look for an existing leaderboard message from this bot
-      const existingMessage = messages.find(msg =>
-        msg.author.id === this.client.user?.id &&
-        msg.embeds.length > 0 &&
-        msg.embeds[0].title?.includes(`${this.gamemodeDisplayName} Leaderboard`)
+      const existingMessage = messages.find(
+        (msg) =>
+          msg.author.id === this.client.user?.id &&
+          msg.embeds.length > 0 &&
+          msg.embeds[0].title?.includes(`${this.gamemodeDisplayName} Leaderboard`),
       );
 
       if (existingMessage) {
@@ -116,10 +146,12 @@ export class Leaderboard {
     }
   }
 
-  private buildLeaderboardEmbed(leaderboard: Array<{ player: string, rating: any, ordinal: number, ordinalDiff: number, matches: number }>): EmbedBuilder {
+  private buildLeaderboardEmbed(
+    leaderboard: Array<{ player: string; rating: any; ordinal: number; ordinalDiff: number; matches: number }>,
+  ): EmbedBuilder {
     const embed = new EmbedBuilder()
       .setTitle(`🏆 ${this.gamemodeDisplayName} Leaderboard`)
-      .setColor(0x00FF00)
+      .setColor(0x00ff00)
       .setTimestamp();
 
     if (leaderboard.length === 0) {
@@ -146,7 +178,7 @@ export class Leaderboard {
       embed.addFields(
         { name: 'Rank', value: ranks.join('\n'), inline: true },
         { name: 'Player', value: players.join('\n'), inline: true },
-        { name: 'Rating', value: ratings.join('\n'), inline: true }
+        { name: 'Rating', value: ratings.join('\n'), inline: true },
       );
     }
 
@@ -192,7 +224,7 @@ export class Leaderboard {
       if (!userRank) {
         await interaction.reply({
           content: `You haven't played any matches in ${this.gamemodeDisplayName} yet. Play some matches to get ranked!`,
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -201,14 +233,13 @@ export class Leaderboard {
 
       await interaction.reply({
         embeds: [embed],
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
-
     } catch (error) {
       console.error('Error handling show rank interaction:', error);
       await interaction.reply({
         content: 'Sorry, there was an error retrieving your rank. Please try again later.',
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
     }
   }
@@ -221,7 +252,7 @@ export class Leaderboard {
       if (!history || history.length === 0) {
         await interaction.reply({
           content: `You haven't played any matches in ${this.gamemodeDisplayName} yet. Play some matches to see your rating history!`,
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -230,14 +261,13 @@ export class Leaderboard {
 
       await interaction.reply({
         embeds: [embed],
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
-
     } catch (error) {
       console.error('Error handling show history interaction:', error);
       await interaction.reply({
         content: 'Sorry, there was an error retrieving your history. Please try again later.',
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
     }
   }
@@ -267,12 +297,12 @@ export class Leaderboard {
     }
   }
 
-  async getUserRank(userId: string): Promise<{ rank: number, entry: any } | null> {
+  async getUserRank(userId: string): Promise<{ rank: number; entry: any } | null> {
     try {
       // Get full leaderboard to find user's position
       const leaderboard = await this.ratingService.getLeaderboard(1000); // Get more entries to find user, TODO: This is not nice!
 
-      const userIndex = leaderboard.findIndex(entry => entry.player === userId);
+      const userIndex = leaderboard.findIndex((entry) => entry.player === userId);
 
       if (userIndex === -1) {
         return null; // User not found on leaderboard
@@ -280,7 +310,7 @@ export class Leaderboard {
 
       return {
         rank: userIndex + 1,
-        entry: leaderboard[userIndex]
+        entry: leaderboard[userIndex],
       };
     } catch (error) {
       console.error(`Error getting user rank for ${userId}:`, error);
@@ -294,12 +324,12 @@ export class Leaderboard {
 
     return new EmbedBuilder()
       .setTitle(`Your Rank in ${this.gamemodeDisplayName}`)
-      .setColor(0x00FF00)
+      .setColor(0x00ff00)
       .setDescription(`<@${userId}>, here's your current ranking:`)
       .addFields(
         { name: 'Rank', value: medal, inline: true },
         { name: 'Rating', value: ratingDisplay, inline: true },
-        { name: 'Matches', value: `${entry.matches}`, inline: true }
+        { name: 'Matches', value: `${entry.matches}`, inline: true },
       )
       .setTimestamp();
   }
@@ -307,7 +337,7 @@ export class Leaderboard {
   createUserHistoryEmbed(userId: string, history: any[]): EmbedBuilder {
     const embed = new EmbedBuilder()
       .setTitle(`Your Rating History in ${this.gamemodeDisplayName}`)
-      .setColor(0x00FF00)
+      .setColor(0x00ff00)
       .setDescription(`<@${userId}>, here are your last ${history.length} matches:`)
       .setTimestamp();
 
@@ -322,7 +352,8 @@ export class Leaderboard {
       const dateString = `<t:${timestamp}:R>`;
 
       // Format ordinal diff with two decimal places and padding
-      const diffString = (entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(2)}` : `${entry.ordinalDiff.toFixed(2)}`);
+      const diffString =
+        entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(2)}` : `${entry.ordinalDiff.toFixed(2)}`;
 
       dates.push(dateString);
       diffs.push(diffString);
@@ -331,14 +362,13 @@ export class Leaderboard {
     // Add two fields with all values joined by newlines
     embed.addFields(
       { name: 'Date', value: dates.join('\n'), inline: true },
-      { name: 'Difference', value: diffs.join('\n'), inline: true }
+      { name: 'Difference', value: diffs.join('\n'), inline: true },
     );
 
     return embed;
   }
 
   async cleanup(): Promise<void> {
-
     // Remove buttons from leaderboard message but keep the message
     if (this.messageUpdater) {
       try {

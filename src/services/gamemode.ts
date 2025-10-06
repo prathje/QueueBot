@@ -33,18 +33,16 @@ export class Gamemode {
     await this.initializeQueues();
   }
 
-
-
   private async ensureCategory(): Promise<void> {
     try {
       let category = this.guild.channels.cache.find(
-        channel => channel.name === this.config.displayName && channel.type === ChannelType.GuildCategory
+        (channel) => channel.name === this.config.displayName && channel.type === ChannelType.GuildCategory,
       ) as CategoryChannel;
 
       if (!category) {
         category = await this.guild.channels.create({
           name: this.config.displayName,
-          type: ChannelType.GuildCategory
+          type: ChannelType.GuildCategory,
         });
         console.log(`Created category: ${this.config.displayName}`);
       }
@@ -65,9 +63,7 @@ export class Gamemode {
       const channelName = `${this.config.id}-results`;
 
       let resultsChannel = this.guild.channels.cache.find(
-        ch => ch.name === channelName &&
-              ch.type === ChannelType.GuildText &&
-              ch.parentId === this.category?.id
+        (ch) => ch.name === channelName && ch.type === ChannelType.GuildText && ch.parentId === this.category?.id,
       ) as TextChannel;
 
       if (!resultsChannel) {
@@ -79,13 +75,22 @@ export class Gamemode {
             {
               id: this.guild.roles.everyone.id,
               allow: [PermissionFlagsBits.ViewChannel],
-              deny: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.CreatePublicThreads, PermissionFlagsBits.CreatePrivateThreads]
+              deny: [
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.CreatePublicThreads,
+                PermissionFlagsBits.CreatePrivateThreads,
+              ],
             },
             {
               id: this.client.user!.id,
-              allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ManageMessages]
-            }
-          ]
+              allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ManageChannels,
+                PermissionFlagsBits.ManageMessages,
+              ],
+            },
+          ],
         });
         console.log(`Created results channel: ${channelName}`);
       } else {
@@ -94,12 +99,21 @@ export class Gamemode {
           {
             id: this.guild.roles.everyone.id,
             allow: [PermissionFlagsBits.ViewChannel],
-            deny: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.CreatePublicThreads, PermissionFlagsBits.CreatePrivateThreads]
+            deny: [
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.CreatePublicThreads,
+              PermissionFlagsBits.CreatePrivateThreads,
+            ],
           },
           {
             id: this.client.user!.id,
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ManageMessages]
-          }
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ManageChannels,
+              PermissionFlagsBits.ManageMessages,
+            ],
+          },
         ]);
         console.log(`Updated permissions for existing results channel: ${channelName}`);
       }
@@ -111,7 +125,6 @@ export class Gamemode {
     }
   }
 
-
   private async initializeQueues(): Promise<void> {
     if (!this.category) {
       throw new Error('Category must be created before initializing queues');
@@ -119,10 +132,18 @@ export class Gamemode {
 
     for (const queueConfig of this.config.queues) {
       try {
-        const queue = new Queue(this.client, this.guild, this.category, {
-          ...queueConfig,
-          gamemodeId: this.config.id
-        }, this.matchmakingMutex, this.resultsChannel, this.onMatchResult.bind(this));
+        const queue = new Queue(
+          this.client,
+          this.guild,
+          this.category,
+          {
+            ...queueConfig,
+            gamemodeId: this.config.id,
+          },
+          this.matchmakingMutex,
+          this.resultsChannel,
+          this.onMatchResult.bind(this),
+        );
         await queue.initialize();
         this.queues.set(queueConfig.id, queue);
         console.log(`Initialized queue: ${queueConfig.displayName}`);
@@ -174,9 +195,10 @@ export class Gamemode {
     await this.ratingService.resetRatings();
   }
 
-
   async onMatchResult(matchResult: IMatchResult): Promise<void> {
-    console.log(`onMatchResult callback received for gamemode ${this.config.id}, match ${matchResult.matchId.slice(0, 8)}`);
+    console.log(
+      `onMatchResult callback received for gamemode ${this.config.id}, match ${matchResult.matchId.slice(0, 8)}`,
+    );
 
     try {
       // Process rating changes for all players in the match

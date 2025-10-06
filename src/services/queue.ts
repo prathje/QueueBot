@@ -10,7 +10,7 @@ import {
   EmbedBuilder,
   ButtonInteraction,
   Message,
-  MessageFlags
+  MessageFlags,
 } from 'discord.js';
 import { IQueue, IMatchResult } from '../types';
 import { PlayerService } from './players';
@@ -39,7 +39,15 @@ export class Queue {
   private interactionListener: ((interaction: any) => Promise<void>) | null = null;
   private disabled: boolean = false;
 
-  constructor(client: Client, guild: Guild, category: CategoryChannel, config: QueueConfig, matchmakingMutex: Mutex, resultsChannel: TextChannel | null = null, onMatchResult: ((matchResult: IMatchResult) => Promise<void>) | null) {
+  constructor(
+    client: Client,
+    guild: Guild,
+    category: CategoryChannel,
+    config: QueueConfig,
+    matchmakingMutex: Mutex,
+    resultsChannel: TextChannel | null = null,
+    onMatchResult: ((matchResult: IMatchResult) => Promise<void>) | null,
+  ) {
     this.client = client;
     this.guild = guild;
     this.category = category;
@@ -63,16 +71,17 @@ export class Queue {
   private async ensureChannel(): Promise<void> {
     try {
       let channel = this.guild.channels.cache.find(
-        ch => ch.name === this.config.displayName.toLowerCase().replace(/\s+/g, '-') &&
-              ch.type === ChannelType.GuildText &&
-              ch.parentId === this.category.id
+        (ch) =>
+          ch.name === this.config.displayName.toLowerCase().replace(/\s+/g, '-') &&
+          ch.type === ChannelType.GuildText &&
+          ch.parentId === this.category.id,
       ) as TextChannel;
 
       if (!channel) {
         channel = await this.guild.channels.create({
           name: this.config.displayName.toLowerCase().replace(/\s+/g, '-'),
           type: ChannelType.GuildText,
-          parent: this.category.id
+          parent: this.category.id,
         });
         console.log(`Created queue channel: ${this.config.displayName}`);
       }
@@ -89,10 +98,9 @@ export class Queue {
 
     try {
       const messages = await this.channel.messages.fetch({ limit: 10 });
-      const existingMessage = messages.find(msg =>
-        msg.author.id === this.client.user?.id &&
-        msg.embeds.length > 0 &&
-        msg.embeds[0].title?.includes('Queue')
+      const existingMessage = messages.find(
+        (msg) =>
+          msg.author.id === this.client.user?.id && msg.embeds.length > 0 && msg.embeds[0].title?.includes('Queue'),
       );
 
       if (existingMessage) {
@@ -116,7 +124,7 @@ export class Queue {
     try {
       this.queueMessage = await this.channel.send({
         embeds: [embed],
-        components: [row]
+        components: [row],
       });
       this.messageUpdater = new MessageUpdater(this.queueMessage);
     } catch (error) {
@@ -132,7 +140,7 @@ export class Queue {
 
     this.messageUpdater.update({
       embeds: [embed],
-      components: [row]
+      components: [row],
     });
   }
 
@@ -148,16 +156,16 @@ export class Queue {
       embed
         .addFields(
           { name: 'Status', value: '🚫 **Queue Disabled**', inline: true },
-          { name: 'Algorithm', value: this.config.matchmakingAlgorithm, inline: true }
+          { name: 'Algorithm', value: this.config.matchmakingAlgorithm, inline: true },
         )
-        .setColor(0xFF6B6B); // Red color for disabled
+        .setColor(0xff6b6b); // Red color for disabled
     } else {
       embed
         .addFields(
           { name: 'Players in Queue', value: `${playersInQueue.length}/${this.config.playerCount}`, inline: true },
-          { name: 'Algorithm', value: this.config.matchmakingAlgorithm, inline: true }
+          { name: 'Algorithm', value: this.config.matchmakingAlgorithm, inline: true },
         )
-        .setColor(0x00AE86); // Green color for enabled
+        .setColor(0x00ae86); // Green color for enabled
     }
 
     return embed;
@@ -181,12 +189,10 @@ export class Queue {
       .setLabel('🔄 Refresh')
       .setStyle(ButtonStyle.Secondary);
 
-    return new ActionRowBuilder<ButtonBuilder>()
-      .addComponents(joinButton, leaveButton /*, refreshButton */);
+    return new ActionRowBuilder<ButtonBuilder>().addComponents(joinButton, leaveButton /*, refreshButton */);
   }
 
   private setupInteractionHandlers(): void {
-
     const m = new Mutex();
 
     this.interactionListener = async (interaction) => {
@@ -221,7 +227,7 @@ export class Queue {
       if (this.disabled) {
         await interaction.reply({
           content: 'This queue is currently disabled.',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -230,10 +236,12 @@ export class Queue {
 
       if (this.playerService.isPlayerInMatch(user.id)) {
         const player = await this.playerService.getPlayer(user.id);
-        console.log(`Player ${user.username} (${user.id}) tried to join queue but is in match: ${player?.currentMatch}`);
+        console.log(
+          `Player ${user.username} (${user.id}) tried to join queue but is in match: ${player?.currentMatch}`,
+        );
         await interaction.reply({
           content: 'You are already in a match!',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -241,7 +249,7 @@ export class Queue {
       if (this.playerService.isPlayerInQueue(user.id, this.config.id)) {
         await interaction.reply({
           content: 'You are already in this queue!',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -249,17 +257,16 @@ export class Queue {
       await this.playerService.addPlayerToQueue(user.id, this.config.id);
       await interaction.reply({
         content: `You joined the ${this.config.displayName} queue!`,
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
 
       await this.updateQueueMessage();
       await this.checkForMatch();
-
     } catch (error) {
       console.error('Error handling join queue:', error);
       await interaction.reply({
         content: 'An error occurred while joining the queue.',
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
     }
   }
@@ -271,7 +278,7 @@ export class Queue {
       if (!this.playerService.isPlayerInQueue(user.id, this.config.id)) {
         await interaction.reply({
           content: 'You are not in this queue!',
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -279,35 +286,32 @@ export class Queue {
       await this.playerService.removePlayerFromQueue(user.id, this.config.id);
       await interaction.reply({
         content: `You left the ${this.config.displayName} queue!`,
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
 
       await this.updateQueueMessage();
-
     } catch (error) {
       console.error('Error handling leave queue:', error);
       await interaction.reply({
         content: 'An error occurred while leaving the queue.',
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
     }
   }
 
   private async handleRefreshQueue(interaction: ButtonInteraction): Promise<void> {
     try {
-
       await interaction.reply({
         content: '🔄 Refreshed!',
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
 
       await this.updateQueueMessage();
-
     } catch (error) {
       console.error('Error handling queue refresh:', error);
       await interaction.reply({
         content: 'An error occurred while refreshing the queue.',
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
     }
   }
@@ -337,7 +341,7 @@ export class Queue {
     }
   }
 
-  private async addPlayersToQueue(playerIds: string[]): Promise<{ successful: string[], failed: string[] }> {
+  private async addPlayersToQueue(playerIds: string[]): Promise<{ successful: string[]; failed: string[] }> {
     const successful: string[] = [];
     const failed: string[] = [];
 
@@ -360,7 +364,9 @@ export class Queue {
     if (successful.length > 0) {
       await this.updateQueueMessage();
       await this.checkForMatch();
-      console.log(`Successfully added ${successful.length} players to queue ${this.config.id}, ${failed.length} failed`);
+      console.log(
+        `Successfully added ${successful.length} players to queue ${this.config.id}, ${failed.length} failed`,
+      );
     }
 
     return { successful, failed };
@@ -372,51 +378,53 @@ export class Queue {
       return;
     }
 
-    await this.matchmakingMutex.runExclusive(async () => {
-      const queueData: IQueue = {
-        ...this.config,
-        players: this.playerService.getPlayersInQueue(this.config.id),
-        discordChannelId: this.channel?.id,
-        disabled: this.disabled
-      };
+    await this.matchmakingMutex
+      .runExclusive(async () => {
+        const queueData: IQueue = {
+          ...this.config,
+          players: this.playerService.getPlayersInQueue(this.config.id),
+          discordChannelId: this.channel?.id,
+          disabled: this.disabled,
+        };
 
-      const match = await this.matchmakingService.processQueue(queueData);
+        const match = await this.matchmakingService.processQueue(queueData);
 
-      if (match) {
-        console.log(`Match created: ${match.id}`);
+        if (match) {
+          console.log(`Match created: ${match.id}`);
 
-        // queues get notified and the match gets saved in the db in here
-        await this.playerService.onPlayersFoundMatch(match.players, match.id);
+          // queues get notified and the match gets saved in the db in here
+          await this.playerService.onPlayersFoundMatch(match.players, match.id);
 
-        const matchHandler = new MatchHandler(
-          this.client,
-          this.guild,
-          this.category,
-          match,
-          async (playerIds: string[], queueId: string) => {
-            // Callback to handle players joining queue (for autojoin)
-            if (queueId === this.config.id) {
-              const result = await this.addPlayersToQueue(playerIds);
-              // Return true if any succeeded
-              return result.successful.length > 0;
-            }
-            return false;
-          },
-          (matchId: string) => {
-            // Callback to handle match cleanup
-            this.removeMatch(matchId);
-          },
-          this.resultsChannel,
-          this.onMatchResult
-        );
-        await matchHandler.initialize();
-        this.activeMatches.set(match.id, matchHandler);
+          const matchHandler = new MatchHandler(
+            this.client,
+            this.guild,
+            this.category,
+            match,
+            async (playerIds: string[], queueId: string) => {
+              // Callback to handle players joining queue (for autojoin)
+              if (queueId === this.config.id) {
+                const result = await this.addPlayersToQueue(playerIds);
+                // Return true if any succeeded
+                return result.successful.length > 0;
+              }
+              return false;
+            },
+            (matchId: string) => {
+              // Callback to handle match cleanup
+              this.removeMatch(matchId);
+            },
+            this.resultsChannel,
+            this.onMatchResult,
+          );
+          await matchHandler.initialize();
+          this.activeMatches.set(match.id, matchHandler);
 
-        this.updateQueueMessage()
-      }
-    }).catch(error => {
-      console.error('Error checking for match:', error);
-    });
+          this.updateQueueMessage();
+        }
+      })
+      .catch((error) => {
+        console.error('Error checking for match:', error);
+      });
   }
 
   getActiveMatches(): MatchHandler[] {
@@ -529,29 +537,28 @@ export class Queue {
           .setDescription(`**Map Pool:** ${this.config.mapPool.join(', ')}`)
           .addFields(
             { name: 'Status', value: '💤 Queue is currently sleeping', inline: true },
-            { name: 'Info', value: 'Bot is restarting or shutting down', inline: true }
+            { name: 'Info', value: 'Bot is restarting or shutting down', inline: true },
           )
-          .setColor(0xFF6B6B)
+          .setColor(0xff6b6b)
           .setTimestamp();
 
         // Create disabled buttons
-        const disabledRow = new ActionRowBuilder<ButtonBuilder>()
-          .addComponents(
-            new ButtonBuilder()
-              .setCustomId('disabled_join')
-              .setLabel('Join Queue')
-              .setStyle(ButtonStyle.Secondary)
-              .setDisabled(true),
-            new ButtonBuilder()
-              .setCustomId('disabled_leave')
-              .setLabel('Leave Queue')
-              .setStyle(ButtonStyle.Secondary)
-              .setDisabled(true)
-          );
+        const disabledRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId('disabled_join')
+            .setLabel('Join Queue')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(true),
+          new ButtonBuilder()
+            .setCustomId('disabled_leave')
+            .setLabel('Leave Queue')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(true),
+        );
 
         await this.queueMessage.edit({
           embeds: [shutdownEmbed],
-          components: [disabledRow]
+          components: [disabledRow],
         });
 
         console.log(`Queue ${this.config.displayName} marked as sleeping`);

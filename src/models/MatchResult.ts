@@ -11,12 +11,12 @@ const MatchResultSchema = new Schema<IMatchResultDocument>({
   map: { type: String, required: true },
   teams: {
     team1: [{ type: String, required: true }],
-    team2: [{ type: String, required: true }]
+    team2: [{ type: String, required: true }],
   },
   players: [{ type: String, required: true }],
   displayNames: { type: Object, default: {} },
   startedAt: { type: Date, required: true },
-  completedAt: { type: Date, default: Date.now }
+  completedAt: { type: Date, default: Date.now },
 });
 
 export const MatchResult = model<IMatchResultDocument>('MatchResult', MatchResultSchema);

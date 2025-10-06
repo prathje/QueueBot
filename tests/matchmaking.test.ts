@@ -292,12 +292,12 @@ describe('MatchmakingService - Fair Algorithm', () => {
 
       // Create a diverse skill distribution
       const playerRatings = new Map<string, RatingValue>([
-        ['ace', { mu: 40, sigma: 2 }],       // Expert
-        ['pro', { mu: 35, sigma: 3 }],       // Professional
-        ['good', { mu: 25, sigma: 4 }],      // Good
-        ['avg', { mu: 20, sigma: 5 }],       // Average
-        ['new', { mu: 15, sigma: 6 }],       // Newcomer
-        ['beginner', { mu: 10, sigma: 7 }],  // Beginner
+        ['ace', { mu: 40, sigma: 2 }], // Expert
+        ['pro', { mu: 35, sigma: 3 }], // Professional
+        ['good', { mu: 25, sigma: 4 }], // Good
+        ['avg', { mu: 20, sigma: 5 }], // Average
+        ['new', { mu: 15, sigma: 6 }], // Newcomer
+        ['beginner', { mu: 10, sigma: 7 }], // Beginner
       ]);
 
       mockRatingService.getPlayerRating.mockImplementation(async (playerId: string) => {
@@ -312,7 +312,7 @@ describe('MatchmakingService - Fair Algorithm', () => {
 
         // Return probability difference - smaller difference means more balanced
         const probDiff = Math.min(0.4, diff / 50); // Scale the difference
-        return [0.5 + probDiff/2, 0.5 - probDiff/2];
+        return [0.5 + probDiff / 2, 0.5 - probDiff / 2];
       });
 
       const match = await matchmakingService.processQueue(queue);
@@ -343,12 +343,12 @@ describe('MatchmakingService - Fair Algorithm', () => {
         const match = await matchmakingService.processQueue(queue);
         results.push({
           team1: [...match!.teams.team1].sort(),
-          team2: [...match!.teams.team2].sort()
+          team2: [...match!.teams.team2].sort(),
         });
       }
 
       // Each result should have valid teams
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.team1).toHaveLength(3);
         expect(result.team2).toHaveLength(3);
         expect([...result.team1, ...result.team2].sort()).toEqual(players.sort());

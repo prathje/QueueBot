@@ -12,8 +12,8 @@ export class StartupResetService {
       // Find all active matches with their channel IDs
       const activeMatches = await Match.find({
         state: {
-          $nin: [MatchState.CLOSED, MatchState.CANCELLED, MatchState.COMPLETED]
-        }
+          $nin: [MatchState.CLOSED, MatchState.CANCELLED, MatchState.COMPLETED],
+        },
       });
 
       console.log(`Found ${activeMatches.length} active matches to clean up`);
@@ -25,7 +25,7 @@ export class StartupResetService {
           matchId: match.matchId,
           discordChannelId: match.discordChannelId,
           discordVoiceChannel1Id: match.discordVoiceChannel1Id,
-          discordVoiceChannel2Id: match.discordVoiceChannel2Id
+          discordVoiceChannel2Id: match.discordVoiceChannel2Id,
         });
         deletedChannels += cleanedUp;
       }
@@ -34,12 +34,12 @@ export class StartupResetService {
       const result = await Match.updateMany(
         {
           state: {
-            $nin: [MatchState.CLOSED, MatchState.CANCELLED, MatchState.COMPLETED]
-          }
+            $nin: [MatchState.CLOSED, MatchState.CANCELLED, MatchState.COMPLETED],
+          },
         },
         {
-          state: MatchState.CANCELLED
-        }
+          state: MatchState.CANCELLED,
+        },
       );
 
       console.log(`Cancelled ${result.modifiedCount} active matches and deleted ${deletedChannels} channels`);

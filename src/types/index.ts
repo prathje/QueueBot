@@ -88,12 +88,12 @@ export enum MatchState {
   IN_PROGRESS = 'in_progress',
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
-  CLOSED = 'closed'
+  CLOSED = 'closed',
 }
 
 export enum TeamName {
   TEAM1 = 'Red',
-  TEAM2 = 'Blue'
+  TEAM2 = 'Blue',
 }
 
 export const getTeamName = (teamNumber: 1 | 2): string => {
