@@ -101,9 +101,7 @@ class QueueBot {
             mapPool: [
               'ctf3',
               'ctf4_old',
-              'ctf_cryochasm',
               'ctf_5_limited',
-              'ctf_duskwood',
               'ctf_tantum',
               'ctf_mine',
               'ctf_planet',
