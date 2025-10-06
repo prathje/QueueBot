@@ -7,20 +7,31 @@
     "dev": "ts-node src/index.ts",
     "build": "tsc",
     "start": "npm run build && node dist/index.js",
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
-  "keywords": ["discord", "queue", "teeworlds", "matchmaking"],
+  "keywords": [
+    "discord",
+    "queue",
+    "teeworlds",
+    "matchmaking"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "discord.js": "^14.22.1",
     "dotenv": "^16.3.1",
     "mongoose": "^8.4.1",
+    "openskill": "^4.1.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.0.0",
     "@types/uuid": "^9.0.0",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.4",
     "ts-node": "^10.9.0",
     "typescript": "^5.0.0"
   }
