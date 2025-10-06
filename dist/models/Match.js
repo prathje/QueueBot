@@ -10,13 +10,13 @@ const MatchSchema = new mongoose_1.Schema({
     players: [{ type: String, required: true }],
     teams: {
         team1: [{ type: String, required: true }],
-        team2: [{ type: String, required: true }]
+        team2: [{ type: String, required: true }],
     },
     map: { type: String, required: true },
     state: {
         type: String,
         enum: Object.values(types_1.MatchState),
-        default: types_1.MatchState.INITIAL
+        default: types_1.MatchState.INITIAL,
     },
     discordChannelId: { type: String, required: false, default: null },
     discordVoiceChannel1Id: { type: String, required: false, default: null },
@@ -25,11 +25,11 @@ const MatchSchema = new mongoose_1.Schema({
     votes: {
         team1: [{ type: String, default: [] }],
         team2: [{ type: String, default: [] }],
-        cancel: [{ type: String, default: [] }]
+        cancel: [{ type: String, default: [] }],
     },
-    startedAt: { type: Date, default: null }
+    startedAt: { type: Date, default: null },
 }, {
-    timestamps: true
+    timestamps: true,
 });
 exports.Match = (0, mongoose_1.model)('Match', MatchSchema);
 //# sourceMappingURL=Match.js.map

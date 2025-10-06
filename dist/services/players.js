@@ -23,7 +23,7 @@ class PlayerService {
                         discordId: dbPlayer.discordId,
                         username: dbPlayer.username,
                         currentQueues: dbPlayer.currentQueues || [],
-                        currentMatch: dbPlayer.currentMatch || null
+                        currentMatch: dbPlayer.currentMatch || null,
                     };
                 }
                 else {
@@ -31,14 +31,14 @@ class PlayerService {
                         discordId,
                         username,
                         currentQueues: [],
-                        currentMatch: null
+                        currentMatch: null,
                     });
                     await newPlayer.save();
                     player = {
                         discordId,
                         username,
                         currentQueues: [],
-                        currentMatch: null
+                        currentMatch: null,
                     };
                 }
                 this.players.set(discordId, player);
@@ -76,7 +76,7 @@ class PlayerService {
             await Player_1.Player.updateOne({ discordId: player.discordId }, {
                 username: player.username,
                 currentQueues: player.currentQueues,
-                currentMatch: player.currentMatch
+                currentMatch: player.currentMatch,
             });
             this.players.set(player.discordId, player);
         }
@@ -101,7 +101,7 @@ class PlayerService {
             throw new Error('Player not found');
         }
         const wasInQueue = player.currentQueues.includes(queueId);
-        player.currentQueues = player.currentQueues.filter(q => q !== queueId);
+        player.currentQueues = player.currentQueues.filter((q) => q !== queueId);
         await this.updatePlayer(player);
     }
     async onPlayersFoundMatch(discordIds, matchId) {
@@ -110,7 +110,7 @@ class PlayerService {
         for (const discordId of discordIds) {
             const player = await this.getPlayer(discordId);
             if (player) {
-                player.currentQueues.forEach(queueId => affectedQueues.add(queueId));
+                player.currentQueues.forEach((queueId) => affectedQueues.add(queueId));
                 player.currentQueues = [];
                 player.currentMatch = matchId;
                 await this.updatePlayer(player);
@@ -172,8 +172,8 @@ class PlayerService {
             const result = await Player_1.Player.updateMany({}, {
                 $set: {
                     currentQueues: [],
-                    currentMatch: null
-                }
+                    currentMatch: null,
+                },
             });
             console.log(`Reset ${result.modifiedCount} player states and cleared cache`);
             return result.modifiedCount;

@@ -26,11 +26,11 @@ class Gamemode {
     }
     async ensureCategory() {
         try {
-            let category = this.guild.channels.cache.find(channel => channel.name === this.config.displayName && channel.type === discord_js_1.ChannelType.GuildCategory);
+            let category = this.guild.channels.cache.find((channel) => channel.name === this.config.displayName && channel.type === discord_js_1.ChannelType.GuildCategory);
             if (!category) {
                 category = await this.guild.channels.create({
                     name: this.config.displayName,
-                    type: discord_js_1.ChannelType.GuildCategory
+                    type: discord_js_1.ChannelType.GuildCategory,
                 });
                 console.log(`Created category: ${this.config.displayName}`);
             }
@@ -47,9 +47,7 @@ class Gamemode {
         }
         try {
             const channelName = `${this.config.id}-results`;
-            let resultsChannel = this.guild.channels.cache.find(ch => ch.name === channelName &&
-                ch.type === discord_js_1.ChannelType.GuildText &&
-                ch.parentId === this.category?.id);
+            let resultsChannel = this.guild.channels.cache.find((ch) => ch.name === channelName && ch.type === discord_js_1.ChannelType.GuildText && ch.parentId === this.category?.id);
             if (!resultsChannel) {
                 resultsChannel = await this.guild.channels.create({
                     name: channelName,
@@ -59,13 +57,22 @@ class Gamemode {
                         {
                             id: this.guild.roles.everyone.id,
                             allow: [discord_js_1.PermissionFlagsBits.ViewChannel],
-                            deny: [discord_js_1.PermissionFlagsBits.SendMessages, discord_js_1.PermissionFlagsBits.CreatePublicThreads, discord_js_1.PermissionFlagsBits.CreatePrivateThreads]
+                            deny: [
+                                discord_js_1.PermissionFlagsBits.SendMessages,
+                                discord_js_1.PermissionFlagsBits.CreatePublicThreads,
+                                discord_js_1.PermissionFlagsBits.CreatePrivateThreads,
+                            ],
                         },
                         {
                             id: this.client.user.id,
-                            allow: [discord_js_1.PermissionFlagsBits.ViewChannel, discord_js_1.PermissionFlagsBits.SendMessages, discord_js_1.PermissionFlagsBits.ManageChannels, discord_js_1.PermissionFlagsBits.ManageMessages]
-                        }
-                    ]
+                            allow: [
+                                discord_js_1.PermissionFlagsBits.ViewChannel,
+                                discord_js_1.PermissionFlagsBits.SendMessages,
+                                discord_js_1.PermissionFlagsBits.ManageChannels,
+                                discord_js_1.PermissionFlagsBits.ManageMessages,
+                            ],
+                        },
+                    ],
                 });
                 console.log(`Created results channel: ${channelName}`);
             }
@@ -75,12 +82,21 @@ class Gamemode {
                     {
                         id: this.guild.roles.everyone.id,
                         allow: [discord_js_1.PermissionFlagsBits.ViewChannel],
-                        deny: [discord_js_1.PermissionFlagsBits.SendMessages, discord_js_1.PermissionFlagsBits.CreatePublicThreads, discord_js_1.PermissionFlagsBits.CreatePrivateThreads]
+                        deny: [
+                            discord_js_1.PermissionFlagsBits.SendMessages,
+                            discord_js_1.PermissionFlagsBits.CreatePublicThreads,
+                            discord_js_1.PermissionFlagsBits.CreatePrivateThreads,
+                        ],
                     },
                     {
                         id: this.client.user.id,
-                        allow: [discord_js_1.PermissionFlagsBits.ViewChannel, discord_js_1.PermissionFlagsBits.SendMessages, discord_js_1.PermissionFlagsBits.ManageChannels, discord_js_1.PermissionFlagsBits.ManageMessages]
-                    }
+                        allow: [
+                            discord_js_1.PermissionFlagsBits.ViewChannel,
+                            discord_js_1.PermissionFlagsBits.SendMessages,
+                            discord_js_1.PermissionFlagsBits.ManageChannels,
+                            discord_js_1.PermissionFlagsBits.ManageMessages,
+                        ],
+                    },
                 ]);
                 console.log(`Updated permissions for existing results channel: ${channelName}`);
             }
@@ -99,7 +115,7 @@ class Gamemode {
             try {
                 const queue = new queue_1.Queue(this.client, this.guild, this.category, {
                     ...queueConfig,
-                    gamemodeId: this.config.id
+                    gamemodeId: this.config.id,
                 }, this.matchmakingMutex, this.resultsChannel, this.onMatchResult.bind(this));
                 await queue.initialize();
                 this.queues.set(queueConfig.id, queue);

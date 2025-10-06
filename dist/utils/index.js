@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Utility functions for the Teeworlds League Queue Bot
+ * Utility functions
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.shuffle = shuffle;
@@ -52,7 +52,7 @@ function generateCombinations(array, size) {
     if (array.length === 0)
         return [];
     const [first, ...rest] = array;
-    const withFirst = generateCombinations(rest, size - 1).map(combo => [first, ...combo]);
+    const withFirst = generateCombinations(rest, size - 1).map((combo) => [first, ...combo]);
     const withoutFirst = generateCombinations(rest, size);
     return [...withFirst, ...withoutFirst];
 }

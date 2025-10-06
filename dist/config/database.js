@@ -8,7 +8,7 @@ exports.disconnectFromDatabase = disconnectFromDatabase;
 const mongoose_1 = __importDefault(require("mongoose"));
 async function connectToDatabase() {
     try {
-        const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/teeworlds-league';
+        const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/queue-bot';
         await mongoose_1.default.connect(mongoUri);
         console.log('Connected to MongoDB successfully');
     }

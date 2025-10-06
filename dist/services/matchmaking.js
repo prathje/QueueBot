@@ -39,11 +39,11 @@ class MatchmakingService {
             votes: {
                 team1: [],
                 team2: [],
-                cancel: []
+                cancel: [],
             },
             createdAt: new Date(),
             startedAt: null,
-            updatedAt: new Date()
+            updatedAt: new Date(),
         };
         return match;
     }
@@ -67,7 +67,7 @@ class MatchmakingService {
         const teamSize = Math.ceil(players.length / 2); // this was floor, but ceil makes sense for our test queue for a single player
         return {
             team1: shuffledPlayers.slice(0, teamSize),
-            team2: shuffledPlayers.slice(teamSize, teamSize * 2)
+            team2: shuffledPlayers.slice(teamSize, teamSize * 2),
         };
     }
     async createTeamsFair(players) {
@@ -94,15 +94,15 @@ class MatchmakingService {
         // Calculate rating differences for each combination
         for (const remainingTeam1 of remainingCombinations) {
             const team1 = [firstPlayer, ...remainingTeam1];
-            const team2 = players.filter(player => !team1.includes(player));
-            const team1Ratings = team1.map(playerId => playerRatings.get(playerId));
-            const team2Ratings = team2.map(playerId => playerRatings.get(playerId));
+            const team2 = players.filter((player) => !team1.includes(player));
+            const team1Ratings = team1.map((playerId) => playerRatings.get(playerId));
+            const team2Ratings = team2.map((playerId) => playerRatings.get(playerId));
             const winProbs = await this.ratingService.predictWin([team1Ratings, team2Ratings]);
             const probDiff = Math.abs(winProbs[0] - winProbs[1]); // Closer to 0.5 is more fair, i.e. smaller difference
             const combination = {
                 team1: team1,
                 team2: team2,
-                probDiff: probDiff
+                probDiff: probDiff,
             };
             if (!bestCombination || combination.probDiff < bestCombination.probDiff) {
                 bestCombination = combination;
@@ -112,11 +112,11 @@ class MatchmakingService {
         // log the team combinations and their win probabilities
         console.log(combinations);
         if (!bestCombination) {
-            console.log("No valid team combinations found, falling back to random teams.");
+            console.log('No valid team combinations found, falling back to random teams.');
             // Fallback to random teams if something goes wrong
             return this.createTeamsRandom(players);
         }
-        console.log("Selected teams with minimal win probability difference:", bestCombination);
+        console.log('Selected teams with minimal win probability difference:', bestCombination);
         // Randomly assign which team is team1 and which is team2
         const shouldSwap = Math.random() < 0.5;
         return shouldSwap

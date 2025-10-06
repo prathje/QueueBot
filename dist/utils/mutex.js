@@ -10,7 +10,7 @@ class Mutex {
         while (this.current) {
             await this.current;
         }
-        this.current = new Promise(resolve => {
+        this.current = new Promise((resolve) => {
             this.resolveCurrent = resolve;
         });
     }

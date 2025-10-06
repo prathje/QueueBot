@@ -8,7 +8,7 @@ const startup_reset_1 = require("./services/startup_reset");
 const mutex_1 = require("./utils/mutex");
 const deploy_1 = require("./commands/deploy");
 const matchmaking_1 = require("./services/matchmaking");
-class TeeWorldsLeagueBot {
+class QueueBot {
     constructor() {
         this.guild = null;
         this.gamemodes = new Map();
@@ -18,8 +18,8 @@ class TeeWorldsLeagueBot {
                 discord_js_1.GatewayIntentBits.Guilds,
                 discord_js_1.GatewayIntentBits.GuildMessages,
                 discord_js_1.GatewayIntentBits.GuildVoiceStates,
-                discord_js_1.GatewayIntentBits.MessageContent
-            ]
+                discord_js_1.GatewayIntentBits.MessageContent,
+            ],
         });
         // Increase max listeners to prevent memory leak warnings
         this.client.setMaxListeners(0);
@@ -81,18 +81,37 @@ class TeeWorldsLeagueBot {
                     {
                         id: 'gctf_2v2',
                         displayName: 'gCTF 2v2',
-                        mapPool: ['ctf3', 'ctf4_old', 'ctf_cryochasm', 'ctf_5_limited', 'ctf_duskwood', 'ctf_tantum', 'ctf_mine', 'ctf_planet', 'ctf_ambiance'],
+                        mapPool: [
+                            'ctf3',
+                            'ctf4_old',
+                            'ctf_cryochasm',
+                            'ctf_5_limited',
+                            'ctf_duskwood',
+                            'ctf_tantum',
+                            'ctf_mine',
+                            'ctf_planet',
+                            'ctf_ambiance',
+                        ],
                         playerCount: 4,
-                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.RANDOM_TEAMS
+                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.FAIR_TEAMS,
                     },
                     {
                         id: 'gctf_3v3',
                         displayName: 'gCTF 3v3',
-                        mapPool: ['ctf2', 'ctf_5_limited', 'ctf_duskwood', 'ctf_mars', 'ctf_moon', 'ctf_chryochasm', 'ctf_exeliar', 'ctf_gartum'],
+                        mapPool: [
+                            'ctf2',
+                            'ctf_5_limited',
+                            'ctf_duskwood',
+                            'ctf_mars',
+                            'ctf_moon',
+                            'ctf_chryochasm',
+                            'ctf_exeliar',
+                            'ctf_gartum',
+                        ],
                         playerCount: 6,
-                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.RANDOM_TEAMS
-                    }
-                ]
+                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.FAIR_TEAMS,
+                    },
+                ],
             },
             {
                 id: 'ctf',
@@ -103,30 +122,30 @@ class TeeWorldsLeagueBot {
                         displayName: 'CTF 2v2',
                         mapPool: ['ctf1_left', 'ctf_aurochs'],
                         playerCount: 4,
-                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.RANDOM_TEAMS
+                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.FAIR_TEAMS,
                     },
                     {
                         id: 'ctf_3v3',
                         displayName: 'CTF 3v3',
                         mapPool: ['ctf3'],
                         playerCount: 6,
-                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.RANDOM_TEAMS
+                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.FAIR_TEAMS,
                     },
                     {
                         id: 'ctf_4v4',
                         displayName: 'CTF 4v4',
                         mapPool: ['ctf_infiltrate'],
                         playerCount: 8,
-                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.RANDOM_TEAMS
+                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.FAIR_TEAMS,
                     },
                     {
                         id: 'ctf_5v5',
                         displayName: 'CTF 5v5',
                         mapPool: ['ctf2'],
                         playerCount: 10,
-                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.RANDOM_TEAMS
-                    }
-                ]
+                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.FAIR_TEAMS,
+                    },
+                ],
             },
             {
                 id: 'dm',
@@ -137,9 +156,9 @@ class TeeWorldsLeagueBot {
                         displayName: 'DM 1v1',
                         mapPool: ['dm1'],
                         playerCount: 2,
-                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.RANDOM_TEAMS
-                    }
-                ]
+                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.FAIR_TEAMS,
+                    },
+                ],
             },
             {
                 id: 'test',
@@ -150,17 +169,17 @@ class TeeWorldsLeagueBot {
                         displayName: 'Test 1 Player',
                         mapPool: ['ctf_test'],
                         playerCount: 1,
-                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.RANDOM_TEAMS
+                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.FAIR_TEAMS,
                     },
                     {
                         id: 'test-2',
                         displayName: 'Test 2 Players',
                         mapPool: ['ctf_test'],
                         playerCount: 2,
-                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.RANDOM_TEAMS
-                    }
-                ]
-            }
+                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.FAIR_TEAMS,
+                    },
+                ],
+            },
         ];
         for (const gamemodeConfig of gamemodeConfigs) {
             try {
@@ -178,9 +197,11 @@ class TeeWorldsLeagueBot {
     async handleSlashCommand(interaction) {
         try {
             const { commandName, channelId } = interaction;
-            if (commandName === 'queue_disable' || commandName === 'queue_enable' ||
+            if (commandName === 'queue_disable' ||
+                commandName === 'queue_enable' ||
                 commandName === 'queue_set_algorithm' ||
-                commandName === 'queue_map_add' || commandName === 'queue_map_remove') {
+                commandName === 'queue_map_add' ||
+                commandName === 'queue_map_remove') {
                 // Find the queue that matches this channel
                 let targetQueue = null;
                 for (const gamemode of this.gamemodes.values()) {
@@ -193,7 +214,7 @@ class TeeWorldsLeagueBot {
                 if (!targetQueue) {
                     await interaction.reply({
                         content: 'This command can only be used in a queue channel.',
-                        ephemeral: true
+                        ephemeral: true,
                     });
                     return;
                 }
@@ -201,14 +222,14 @@ class TeeWorldsLeagueBot {
                     await targetQueue.disable();
                     await interaction.reply({
                         content: `Queue **${targetQueue.getDisplayName()}** has been disabled. All players have been removed.`,
-                        ephemeral: true
+                        ephemeral: true,
                     });
                 }
                 else if (commandName === 'queue_enable') {
                     await targetQueue.enable();
                     await interaction.reply({
                         content: `Queue **${targetQueue.getDisplayName()}** has been enabled.`,
-                        ephemeral: true
+                        ephemeral: true,
                     });
                 }
                 else if (commandName === 'queue_set_algorithm') {
@@ -218,7 +239,7 @@ class TeeWorldsLeagueBot {
                     await targetQueue.setAlgorithm(algorithm);
                     await interaction.reply({
                         content: `Queue **${targetQueue.getDisplayName()}** algorithm set to **${displayName}**.`,
-                        ephemeral: true
+                        ephemeral: true,
                     });
                 }
                 else if (commandName === 'queue_map_add') {
@@ -227,13 +248,13 @@ class TeeWorldsLeagueBot {
                     if (success) {
                         await interaction.reply({
                             content: `Map **${mapName}** added to queue **${targetQueue.getDisplayName()}**.`,
-                            ephemeral: true
+                            ephemeral: true,
                         });
                     }
                     else {
                         await interaction.reply({
                             content: `Map **${mapName}** is already in the map pool for queue **${targetQueue.getDisplayName()}**.`,
-                            ephemeral: true
+                            ephemeral: true,
                         });
                     }
                 }
@@ -243,13 +264,13 @@ class TeeWorldsLeagueBot {
                     if (success) {
                         await interaction.reply({
                             content: `Map **${mapName}** removed from queue **${targetQueue.getDisplayName()}**.`,
-                            ephemeral: true
+                            ephemeral: true,
                         });
                     }
                     else {
                         await interaction.reply({
                             content: `Map **${mapName}** could not be removed **${targetQueue.getDisplayName()}**.`,
-                            ephemeral: true
+                            ephemeral: true,
                         });
                     }
                 }
@@ -259,7 +280,7 @@ class TeeWorldsLeagueBot {
             console.error('Error handling slash command:', error);
             await interaction.reply({
                 content: 'An error occurred while executing the command.',
-                ephemeral: true
+                ephemeral: true,
             });
         }
     }
@@ -283,7 +304,7 @@ class TeeWorldsLeagueBot {
                 await gamemode.shutdown();
             }
             // Give a moment for the queue messages to be updated
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 1000));
             this.client.destroy();
             console.log('Bot shutdown complete');
             process.exit(0);
@@ -294,6 +315,6 @@ class TeeWorldsLeagueBot {
         }
     }
 }
-const bot = new TeeWorldsLeagueBot();
+const bot = new QueueBot();
 bot.start().catch(console.error);
 //# sourceMappingURL=index.js.map

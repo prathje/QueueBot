@@ -4,7 +4,7 @@ exports.Rating = void 0;
 const mongoose_1 = require("mongoose");
 const RatingValueSchema = new mongoose_1.Schema({
     mu: { type: Number, required: true },
-    sigma: { type: Number, required: true }
+    sigma: { type: Number, required: true },
 }, { _id: false });
 const RatingSchema = new mongoose_1.Schema({
     player: { type: String, required: true },
@@ -15,7 +15,7 @@ const RatingSchema = new mongoose_1.Schema({
     after: { type: RatingValueSchema, required: true },
     ordinalBefore: { type: Number, required: true },
     ordinalAfter: { type: Number, required: true },
-    ordinalDiff: { type: Number, required: true }
+    ordinalDiff: { type: Number, required: true },
 });
 // Index for efficient queries
 RatingSchema.index({ player: 1, gamemode: 1 });

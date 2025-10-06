@@ -6,9 +6,9 @@ const PlayerSchema = new mongoose_1.Schema({
     discordId: { type: String, required: true, unique: true },
     username: { type: String, required: true },
     currentQueues: [{ type: String, default: [] }],
-    currentMatch: { type: String, required: false, default: null }
+    currentMatch: { type: String, required: false, default: null },
 }, {
-    timestamps: true
+    timestamps: true,
 });
 exports.Player = (0, mongoose_1.model)('Player', PlayerSchema);
 //# sourceMappingURL=Player.js.map

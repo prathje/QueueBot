@@ -8,7 +8,7 @@ async function deployCommands(applicationId) {
     const rest = new discord_js_1.REST().setToken(environment_1.config.discord.token);
     try {
         console.log('Started refreshing application (/) commands.');
-        const commandData = index_1.commands.map(command => command.toJSON());
+        const commandData = index_1.commands.map((command) => command.toJSON());
         await rest.put(discord_js_1.Routes.applicationGuildCommands(applicationId, environment_1.config.discord.guildId), { body: commandData });
         console.log('Successfully reloaded application (/) commands.');
     }

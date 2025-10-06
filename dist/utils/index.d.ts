@@ -1,5 +1,5 @@
 /**
- * Utility functions for the Teeworlds League Queue Bot
+ * Utility functions
  */
 /**
  * Shuffles an array in place and returns it.

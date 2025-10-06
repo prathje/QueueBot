@@ -10,12 +10,12 @@ const MatchResultSchema = new mongoose_1.Schema({
     map: { type: String, required: true },
     teams: {
         team1: [{ type: String, required: true }],
-        team2: [{ type: String, required: true }]
+        team2: [{ type: String, required: true }],
     },
     players: [{ type: String, required: true }],
     displayNames: { type: Object, default: {} },
     startedAt: { type: Date, required: true },
-    completedAt: { type: Date, default: Date.now }
+    completedAt: { type: Date, default: Date.now },
 });
 exports.MatchResult = (0, mongoose_1.model)('MatchResult', MatchResultSchema);
 //# sourceMappingURL=MatchResult.js.map

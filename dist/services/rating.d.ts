@@ -38,6 +38,6 @@ export declare class RatingService {
      * Reset ratings by clearing existing ones and recomputing from historical match results
      */
     resetRatings(): Promise<void>;
-    predictWin(teamsWithPlayerRatings: (RatingValue[])[]): Promise<number[]>;
+    predictWin(teamsWithPlayerRatings: RatingValue[][]): Promise<number[]>;
 }
 //# sourceMappingURL=rating.d.ts.map

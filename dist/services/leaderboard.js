@@ -5,7 +5,7 @@ const discord_js_1 = require("discord.js");
 const message_updater_1 = require("../utils/message_updater");
 class Leaderboard {
     getNumberWithOrdinal(n) {
-        const s = ["th", "st", "nd", "rd"];
+        const s = ['th', 'st', 'nd', 'rd'];
         const v = n % 100;
         return n + (s[(v - 20) % 10] || s[v] || s[0]);
     }
@@ -22,9 +22,7 @@ class Leaderboard {
     async initialize(category) {
         try {
             const channelName = `${this.gamemodeId}-leaderboard`;
-            let leaderboardChannel = this.guild.channels.cache.find(ch => ch.name === channelName &&
-                ch.type === discord_js_1.ChannelType.GuildText &&
-                ch.parentId === category.id);
+            let leaderboardChannel = this.guild.channels.cache.find((ch) => ch.name === channelName && ch.type === discord_js_1.ChannelType.GuildText && ch.parentId === category.id);
             if (!leaderboardChannel) {
                 leaderboardChannel = await this.guild.channels.create({
                     name: channelName,
@@ -34,13 +32,22 @@ class Leaderboard {
                         {
                             id: this.guild.roles.everyone.id,
                             allow: [discord_js_1.PermissionFlagsBits.ViewChannel],
-                            deny: [discord_js_1.PermissionFlagsBits.SendMessages, discord_js_1.PermissionFlagsBits.CreatePublicThreads, discord_js_1.PermissionFlagsBits.CreatePrivateThreads]
+                            deny: [
+                                discord_js_1.PermissionFlagsBits.SendMessages,
+                                discord_js_1.PermissionFlagsBits.CreatePublicThreads,
+                                discord_js_1.PermissionFlagsBits.CreatePrivateThreads,
+                            ],
                         },
                         {
                             id: this.client.user.id,
-                            allow: [discord_js_1.PermissionFlagsBits.ViewChannel, discord_js_1.PermissionFlagsBits.SendMessages, discord_js_1.PermissionFlagsBits.ManageChannels, discord_js_1.PermissionFlagsBits.ManageMessages]
-                        }
-                    ]
+                            allow: [
+                                discord_js_1.PermissionFlagsBits.ViewChannel,
+                                discord_js_1.PermissionFlagsBits.SendMessages,
+                                discord_js_1.PermissionFlagsBits.ManageChannels,
+                                discord_js_1.PermissionFlagsBits.ManageMessages,
+                            ],
+                        },
+                    ],
                 });
                 console.log(`Created leaderboard channel: ${channelName}`);
             }
@@ -50,12 +57,21 @@ class Leaderboard {
                     {
                         id: this.guild.roles.everyone.id,
                         allow: [discord_js_1.PermissionFlagsBits.ViewChannel],
-                        deny: [discord_js_1.PermissionFlagsBits.SendMessages, discord_js_1.PermissionFlagsBits.CreatePublicThreads, discord_js_1.PermissionFlagsBits.CreatePrivateThreads]
+                        deny: [
+                            discord_js_1.PermissionFlagsBits.SendMessages,
+                            discord_js_1.PermissionFlagsBits.CreatePublicThreads,
+                            discord_js_1.PermissionFlagsBits.CreatePrivateThreads,
+                        ],
                     },
                     {
                         id: this.client.user.id,
-                        allow: [discord_js_1.PermissionFlagsBits.ViewChannel, discord_js_1.PermissionFlagsBits.SendMessages, discord_js_1.PermissionFlagsBits.ManageChannels, discord_js_1.PermissionFlagsBits.ManageMessages]
-                    }
+                        allow: [
+                            discord_js_1.PermissionFlagsBits.ViewChannel,
+                            discord_js_1.PermissionFlagsBits.SendMessages,
+                            discord_js_1.PermissionFlagsBits.ManageChannels,
+                            discord_js_1.PermissionFlagsBits.ManageMessages,
+                        ],
+                    },
                 ]);
                 console.log(`Updated permissions for existing leaderboard channel: ${channelName}`);
             }
@@ -79,7 +95,7 @@ class Leaderboard {
             // Fetch recent messages from the leaderboard channel
             const messages = await this.leaderboardChannel.messages.fetch({ limit: 10 });
             // Look for an existing leaderboard message from this bot
-            const existingMessage = messages.find(msg => msg.author.id === this.client.user?.id &&
+            const existingMessage = messages.find((msg) => msg.author.id === this.client.user?.id &&
                 msg.embeds.length > 0 &&
                 msg.embeds[0].title?.includes(`${this.gamemodeDisplayName} Leaderboard`));
             if (existingMessage) {
@@ -95,7 +111,7 @@ class Leaderboard {
     buildLeaderboardEmbed(leaderboard) {
         const embed = new discord_js_1.EmbedBuilder()
             .setTitle(`🏆 ${this.gamemodeDisplayName} Leaderboard`)
-            .setColor(0x00FF00)
+            .setColor(0x00ff00)
             .setTimestamp();
         if (leaderboard.length === 0) {
             embed.setDescription('No players have completed matches yet.');
@@ -155,21 +171,21 @@ class Leaderboard {
             if (!userRank) {
                 await interaction.reply({
                     content: `You haven't played any matches in ${this.gamemodeDisplayName} yet. Play some matches to get ranked!`,
-                    flags: discord_js_1.MessageFlags.Ephemeral
+                    flags: discord_js_1.MessageFlags.Ephemeral,
                 });
                 return;
             }
             const embed = this.createUserRankEmbed(userId, userRank.rank, userRank.entry);
             await interaction.reply({
                 embeds: [embed],
-                flags: discord_js_1.MessageFlags.Ephemeral
+                flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }
         catch (error) {
             console.error('Error handling show rank interaction:', error);
             await interaction.reply({
                 content: 'Sorry, there was an error retrieving your rank. Please try again later.',
-                flags: discord_js_1.MessageFlags.Ephemeral
+                flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }
     }
@@ -180,21 +196,21 @@ class Leaderboard {
             if (!history || history.length === 0) {
                 await interaction.reply({
                     content: `You haven't played any matches in ${this.gamemodeDisplayName} yet. Play some matches to see your rating history!`,
-                    flags: discord_js_1.MessageFlags.Ephemeral
+                    flags: discord_js_1.MessageFlags.Ephemeral,
                 });
                 return;
             }
             const embed = this.createUserHistoryEmbed(userId, history);
             await interaction.reply({
                 embeds: [embed],
-                flags: discord_js_1.MessageFlags.Ephemeral
+                flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }
         catch (error) {
             console.error('Error handling show history interaction:', error);
             await interaction.reply({
                 content: 'Sorry, there was an error retrieving your history. Please try again later.',
-                flags: discord_js_1.MessageFlags.Ephemeral
+                flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }
     }
@@ -226,13 +242,13 @@ class Leaderboard {
         try {
             // Get full leaderboard to find user's position
             const leaderboard = await this.ratingService.getLeaderboard(1000); // Get more entries to find user, TODO: This is not nice!
-            const userIndex = leaderboard.findIndex(entry => entry.player === userId);
+            const userIndex = leaderboard.findIndex((entry) => entry.player === userId);
             if (userIndex === -1) {
                 return null; // User not found on leaderboard
             }
             return {
                 rank: userIndex + 1,
-                entry: leaderboard[userIndex]
+                entry: leaderboard[userIndex],
             };
         }
         catch (error) {
@@ -245,7 +261,7 @@ class Leaderboard {
         const ratingDisplay = `${entry.ordinal.toFixed(2)}`;
         return new discord_js_1.EmbedBuilder()
             .setTitle(`Your Rank in ${this.gamemodeDisplayName}`)
-            .setColor(0x00FF00)
+            .setColor(0x00ff00)
             .setDescription(`<@${userId}>, here's your current ranking:`)
             .addFields({ name: 'Rank', value: medal, inline: true }, { name: 'Rating', value: ratingDisplay, inline: true }, { name: 'Matches', value: `${entry.matches}`, inline: true })
             .setTimestamp();
@@ -253,7 +269,7 @@ class Leaderboard {
     createUserHistoryEmbed(userId, history) {
         const embed = new discord_js_1.EmbedBuilder()
             .setTitle(`Your Rating History in ${this.gamemodeDisplayName}`)
-            .setColor(0x00FF00)
+            .setColor(0x00ff00)
             .setDescription(`<@${userId}>, here are your last ${history.length} matches:`)
             .setTimestamp();
         // Build arrays for each column
@@ -265,7 +281,7 @@ class Leaderboard {
             const timestamp = Math.floor(date.getTime() / 1000);
             const dateString = `<t:${timestamp}:R>`;
             // Format ordinal diff with two decimal places and padding
-            const diffString = (entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(2)}` : `${entry.ordinalDiff.toFixed(2)}`);
+            const diffString = entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(2)}` : `${entry.ordinalDiff.toFixed(2)}`;
             dates.push(dateString);
             diffs.push(diffString);
         });
