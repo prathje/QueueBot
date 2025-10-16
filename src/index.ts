@@ -176,6 +176,26 @@ class QueueBot {
         ],
       },
       {
+        id: 'ictf',
+        displayName: 'iCTF - Instagib CTF',
+        queues: [
+          {
+            id: 'ictf_1v1',
+            displayName: 'iCTF 1v1',
+            mapPool: ['ctf4_old', 'desertbattle', 'mini4old', 'desertcamp', 'ctf_nessness'],
+            playerCount: 2,
+            matchmakingAlgorithm: MatchmakingAlgorithm.RANDOM_TEAMS
+          },
+          {
+            id: 'ictf_2v2',
+            displayName: 'iCTF 2v2',
+            mapPool: ['ctf4_old'],
+            playerCount: 4,
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
+          }
+        ]
+      },
+      {
         id: 'test',
         displayName: 'Test',
         queues: [
