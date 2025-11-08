@@ -262,7 +262,6 @@ class Queue {
     }
     async handlePingRoleAdd(interaction) {
         try {
-            const interactionUser = await this.guild.members.fetch(interaction.user.id);
             if (!this.pingRole) {
                 await interaction.reply({
                     content: 'No role defined',
@@ -278,6 +277,7 @@ class Queue {
                 });
                 return;
             }
+            const interactionUser = await this.guild.members.fetch(interaction.user.id);
             if (!interactionUser) {
                 await interaction.reply({
                     content: 'User not found!',
@@ -285,18 +285,36 @@ class Queue {
                 });
                 return;
             }
+            // Check if user already has the role
+            if (interactionUser.roles.cache.has(role.id)) {
+                await interaction.reply({
+                    content: 'You already have LFG notifications enabled!',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+                return;
+            }
+            // Add the role first, then reply on success
+            await interactionUser.roles.add(role);
             await interaction.reply({
-                content: '🚀Notifications Enabled!',
+                content: '🚀 Notifications Enabled!',
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
-            await interactionUser.roles.add(role);
         }
         catch (error) {
-            console.error('Error handling queue refresh:', error);
-            await interaction.reply({
-                content: 'An error occurred while adding the lfg role.',
-                flags: discord_js_1.MessageFlags.Ephemeral,
-            });
+            console.error('Error handling ping role add:', error);
+            // Check if we already replied to avoid Discord API error
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp({
+                    content: 'An error occurred while adding the LFG role.',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+            else {
+                await interaction.reply({
+                    content: 'An error occurred while adding the LFG role.',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
         }
     }
     async handlePingRoleRemove(interaction) {
@@ -324,18 +342,36 @@ class Queue {
                 });
                 return;
             }
+            // Check if user doesn't have the role
+            if (!interactionUser.roles.cache.has(role.id)) {
+                await interaction.reply({
+                    content: 'You don\'t have LFG notifications enabled!',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+                return;
+            }
+            // Remove the role first, then reply on success
+            await interactionUser.roles.remove(role);
             await interaction.reply({
                 content: '👀 Notifications Disabled!',
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
-            await interactionUser.roles.remove(role);
         }
         catch (error) {
-            console.error('Error handling queue refresh:', error);
-            await interaction.reply({
-                content: 'An error occurred while adding the lfg role.',
-                flags: discord_js_1.MessageFlags.Ephemeral,
-            });
+            console.error('Error handling ping role remove:', error);
+            // Check if we already replied to avoid Discord API error
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp({
+                    content: 'An error occurred while removing the LFG role.',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+            else {
+                await interaction.reply({
+                    content: 'An error occurred while removing the LFG role.',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
         }
     }
     async addSinglePlayerProgrammatically(playerId) {

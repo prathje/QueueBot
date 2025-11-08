@@ -335,10 +335,7 @@ export class Queue {
 
 
   private async handlePingRoleAdd(interaction: ButtonInteraction): Promise<void> {
-
     try {
-      const interactionUser = await this.guild.members.fetch(interaction.user.id);
-
       if (!this.pingRole) {
         await interaction.reply({
           content: 'No role defined',
@@ -347,16 +344,17 @@ export class Queue {
         return;
       }
 
-
       const role = this.guild.roles.cache.find(r => r.name === this.pingRole);
 
-      if(!role) {
+      if (!role) {
         await interaction.reply({
           content: 'Role not found!',
           flags: MessageFlags.Ephemeral,
         });
         return;
       }
+
+      const interactionUser = await this.guild.members.fetch(interaction.user.id);
 
       if (!interactionUser) {
         await interaction.reply({
@@ -366,24 +364,42 @@ export class Queue {
         return;
       }
 
-      await interaction.reply({
-        content: '🚀Notifications Enabled!',
-        flags: MessageFlags.Ephemeral,
-      });
+      // Check if user already has the role
+      if (interactionUser.roles.cache.has(role.id)) {
+        await interaction.reply({
+          content: 'You already have LFG notifications enabled!',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      // Add the role first, then reply on success
       await interactionUser.roles.add(role);
 
-    } catch (error) {
-      console.error('Error handling queue refresh:', error);
       await interaction.reply({
-        content: 'An error occurred while adding the lfg role.',
+        content: '🚀 Notifications Enabled!',
         flags: MessageFlags.Ephemeral,
       });
+
+    } catch (error) {
+      console.error('Error handling ping role add:', error);
+      // Check if we already replied to avoid Discord API error
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({
+          content: 'An error occurred while adding the LFG role.',
+          flags: MessageFlags.Ephemeral,
+        });
+      } else {
+        await interaction.reply({
+          content: 'An error occurred while adding the LFG role.',
+          flags: MessageFlags.Ephemeral,
+        });
+      }
     }
   }
 
   private async handlePingRoleRemove(interaction: ButtonInteraction): Promise<void> {
     try {
-
       if (!this.pingRole) {
         await interaction.reply({
           content: 'No role defined',
@@ -394,7 +410,7 @@ export class Queue {
 
       const role = this.guild.roles.cache.find(r => r.name === this.pingRole);
 
-      if(!role) {
+      if (!role) {
         await interaction.reply({
           content: 'Role not found!',
           flags: MessageFlags.Ephemeral,
@@ -411,20 +427,38 @@ export class Queue {
         });
         return;
       }
+
+      // Check if user doesn't have the role
+      if (!interactionUser.roles.cache.has(role.id)) {
+        await interaction.reply({
+          content: 'You don\'t have LFG notifications enabled!',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      // Remove the role first, then reply on success
+      await interactionUser.roles.remove(role);
 
       await interaction.reply({
         content: '👀 Notifications Disabled!',
         flags: MessageFlags.Ephemeral,
       });
 
-      await interactionUser.roles.remove(role);
-
     } catch (error) {
-      console.error('Error handling queue refresh:', error);
-      await interaction.reply({
-        content: 'An error occurred while adding the lfg role.',
-        flags: MessageFlags.Ephemeral,
-      });
+      console.error('Error handling ping role remove:', error);
+      // Check if we already replied to avoid Discord API error
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({
+          content: 'An error occurred while removing the LFG role.',
+          flags: MessageFlags.Ephemeral,
+        });
+      } else {
+        await interaction.reply({
+          content: 'An error occurred while removing the LFG role.',
+          flags: MessageFlags.Ephemeral,
+        });
+      }
     }
   }
 

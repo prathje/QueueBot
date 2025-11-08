@@ -1,4 +1,4 @@
-import { Client, CategoryChannel, ChannelType, Guild, TextChannel, PermissionFlagsBits } from 'discord.js';
+import {Client, CategoryChannel, ChannelType, Guild, TextChannel, PermissionFlagsBits, MessageFlags} from 'discord.js';
 import { IGamemode, GamemodeConfig, IMatchResult } from '../types';
 import { Queue } from './queue';
 import { RatingService } from './rating';
@@ -139,13 +139,20 @@ export class Gamemode {
 
 
     try {
+
+      let role = this.guild.roles.cache.find(r => r.name === this.config.pingRole);
+
       // ensure that lfg role exists!
-      const role = await this.guild.roles.create(
-          {
-            name: this.config.pingRole,
-            mentionable: true // so we can ping!
-          }
-      );
+      if (!role) {
+        role = await this.guild.roles.create(
+            {
+              name: this.config.pingRole,
+              mentionable: true // so we can ping!
+            }
+        );
+      }
+
+
 
       const channelName = `${this.config.id}-lfg`;
 
@@ -172,6 +179,15 @@ export class Gamemode {
             PermissionFlagsBits.SendMessages,
           ],
         },
+        {
+          id: this.client.user!.id,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ManageChannels,
+            PermissionFlagsBits.ManageMessages,
+          ],
+        }
       ];
 
       if (!lfgChannel) {

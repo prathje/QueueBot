@@ -118,20 +118,22 @@ class Gamemode {
             return;
         }
         try {
+            let role = this.guild.roles.cache.find(r => r.name === this.config.pingRole);
             // ensure that lfg role exists!
-            const role = await this.guild.roles.create({
-                name: this.config.pingRole,
-                mentionable: true // so we can ping!
-            });
+            if (!role) {
+                role = await this.guild.roles.create({
+                    name: this.config.pingRole,
+                    mentionable: true // so we can ping!
+                });
+            }
             const channelName = `${this.config.id}-lfg`;
             let lfgChannel = this.guild.channels.cache.find((ch) => ch.name === channelName && ch.type === discord_js_1.ChannelType.GuildText && ch.parentId === this.category?.id);
             const permissionOverwrites = [
                 {
                     id: this.guild.roles.everyone.id,
-                    allow: [
-                        discord_js_1.PermissionFlagsBits.ViewChannel
-                    ],
+                    allow: [],
                     deny: [
+                        discord_js_1.PermissionFlagsBits.ViewChannel,
                         discord_js_1.PermissionFlagsBits.SendMessages,
                         discord_js_1.PermissionFlagsBits.CreatePublicThreads,
                         discord_js_1.PermissionFlagsBits.CreatePrivateThreads,
@@ -144,6 +146,15 @@ class Gamemode {
                         discord_js_1.PermissionFlagsBits.SendMessages,
                     ],
                 },
+                {
+                    id: this.client.user.id,
+                    allow: [
+                        discord_js_1.PermissionFlagsBits.ViewChannel,
+                        discord_js_1.PermissionFlagsBits.SendMessages,
+                        discord_js_1.PermissionFlagsBits.ManageChannels,
+                        discord_js_1.PermissionFlagsBits.ManageMessages,
+                    ],
+                }
             ];
             if (!lfgChannel) {
                 lfgChannel = await this.guild.channels.create({
