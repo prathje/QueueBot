@@ -164,9 +164,9 @@ export class Gamemode {
         {
           id: this.guild.roles.everyone.id,
           allow: [
+            PermissionFlagsBits.ViewChannel
           ],
           deny: [
-            PermissionFlagsBits.ViewChannel,
             PermissionFlagsBits.SendMessages,
             PermissionFlagsBits.CreatePublicThreads,
             PermissionFlagsBits.CreatePrivateThreads,

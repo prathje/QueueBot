@@ -131,9 +131,10 @@ class Gamemode {
             const permissionOverwrites = [
                 {
                     id: this.guild.roles.everyone.id,
-                    allow: [],
+                    allow: [
+                        discord_js_1.PermissionFlagsBits.ViewChannel
+                    ],
                     deny: [
-                        discord_js_1.PermissionFlagsBits.ViewChannel,
                         discord_js_1.PermissionFlagsBits.SendMessages,
                         discord_js_1.PermissionFlagsBits.CreatePublicThreads,
                         discord_js_1.PermissionFlagsBits.CreatePrivateThreads,
