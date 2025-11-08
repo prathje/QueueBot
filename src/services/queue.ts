@@ -202,7 +202,7 @@ export class Queue {
         .setLabel('😴 Disable LFG')
         .setStyle(ButtonStyle.Secondary);
 
-    return new ActionRowBuilder<ButtonBuilder>().addComponents(joinButton, leaveButton /*, refreshButton */);
+    return new ActionRowBuilder<ButtonBuilder>().addComponents(joinButton, leaveButton, pingRoleAddButton, pingRoleRemoveButton /*, refreshButton */);
   }
 
   private setupInteractionHandlers(): void {
