@@ -143,7 +143,7 @@ class Queue {
             .setCustomId(`ping_role_remove_${this.config.id}`)
             .setLabel('😴 Disable LFG')
             .setStyle(discord_js_1.ButtonStyle.Secondary);
-        return new discord_js_1.ActionRowBuilder().addComponents(joinButton, leaveButton /*, refreshButton */);
+        return new discord_js_1.ActionRowBuilder().addComponents(joinButton, leaveButton, pingRoleAddButton, pingRoleRemoveButton /*, refreshButton */);
     }
     setupInteractionHandlers() {
         const m = new mutex_1.Mutex();
@@ -270,6 +270,14 @@ class Queue {
                 });
                 return;
             }
+            const role = this.guild.roles.cache.find(r => r.name === this.pingRole);
+            if (!role) {
+                await interaction.reply({
+                    content: 'Role not found!',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+                return;
+            }
             if (!interactionUser) {
                 await interaction.reply({
                     content: 'User not found!',
@@ -277,19 +285,11 @@ class Queue {
                 });
                 return;
             }
-            if (!interactionUser.roles.cache.find(r => r.name === this.pingRole)) {
-                await interaction.reply({
-                    content: '🚀Notifications Enabled!',
-                    flags: discord_js_1.MessageFlags.Ephemeral,
-                });
-                await interactionUser.roles.add(this.pingRole);
-            }
-            else {
-                await interaction.reply({
-                    content: 'You already have notifications enabled!',
-                    flags: discord_js_1.MessageFlags.Ephemeral,
-                });
-            }
+            await interaction.reply({
+                content: '🚀Notifications Enabled!',
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+            await interactionUser.roles.add(role);
         }
         catch (error) {
             console.error('Error handling queue refresh:', error);
@@ -308,6 +308,14 @@ class Queue {
                 });
                 return;
             }
+            const role = this.guild.roles.cache.find(r => r.name === this.pingRole);
+            if (!role) {
+                await interaction.reply({
+                    content: 'Role not found!',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+                return;
+            }
             const interactionUser = await this.guild.members.fetch(interaction.user.id);
             if (!interactionUser) {
                 await interaction.reply({
@@ -316,19 +324,11 @@ class Queue {
                 });
                 return;
             }
-            if (interactionUser.roles.cache.find(r => r.name === this.pingRole)) {
-                await interaction.reply({
-                    content: '👀 Notifications Disabled!',
-                    flags: discord_js_1.MessageFlags.Ephemeral,
-                });
-                await interactionUser.roles.remove(this.pingRole);
-            }
-            else {
-                await interaction.reply({
-                    content: 'You do not have notifications enabled!',
-                    flags: discord_js_1.MessageFlags.Ephemeral,
-                });
-            }
+            await interaction.reply({
+                content: '👀 Notifications Disabled!',
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+            await interactionUser.roles.remove(role);
         }
         catch (error) {
             console.error('Error handling queue refresh:', error);

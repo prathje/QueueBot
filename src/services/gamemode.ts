@@ -29,6 +29,7 @@ export class Gamemode {
   async initialize(): Promise<void> {
     await this.ensureCategory();
     await this.ensureResultsChannel();
+    await this.ensureLFGChannel();
     await this.resetRating(); // reset rating before initializing leaderboard
     await this.leaderboardService.initialize(this.category!);
     await this.initializeQueues();

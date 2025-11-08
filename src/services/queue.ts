@@ -347,6 +347,17 @@ export class Queue {
         return;
       }
 
+
+      const role = this.guild.roles.cache.find(r => r.name === this.pingRole);
+
+      if(!role) {
+        await interaction.reply({
+          content: 'Role not found!',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
       if (!interactionUser) {
         await interaction.reply({
           content: 'User not found!',
@@ -355,18 +366,12 @@ export class Queue {
         return;
       }
 
-      if (!interactionUser.roles.cache.find(r => r.name === this.pingRole)) {
-        await interaction.reply({
-          content: '🚀Notifications Enabled!',
-          flags: MessageFlags.Ephemeral,
-        });
-        await interactionUser.roles.add(this.pingRole);
-      } else {
-        await interaction.reply({
-          content: 'You already have notifications enabled!',
-          flags: MessageFlags.Ephemeral,
-        });
-      }
+      await interaction.reply({
+        content: '🚀Notifications Enabled!',
+        flags: MessageFlags.Ephemeral,
+      });
+      await interactionUser.roles.add(role);
+
     } catch (error) {
       console.error('Error handling queue refresh:', error);
       await interaction.reply({
@@ -387,6 +392,16 @@ export class Queue {
         return;
       }
 
+      const role = this.guild.roles.cache.find(r => r.name === this.pingRole);
+
+      if(!role) {
+        await interaction.reply({
+          content: 'Role not found!',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
       const interactionUser = await this.guild.members.fetch(interaction.user.id);
 
       if (!interactionUser) {
@@ -397,18 +412,13 @@ export class Queue {
         return;
       }
 
-      if (interactionUser.roles.cache.find(r => r.name === this.pingRole)) {
-        await interaction.reply({
-          content: '👀 Notifications Disabled!',
-          flags: MessageFlags.Ephemeral,
-        });
-        await interactionUser.roles.remove(this.pingRole);
-      } else {
-        await interaction.reply({
-          content: 'You do not have notifications enabled!',
-          flags: MessageFlags.Ephemeral,
-        });
-      }
+      await interaction.reply({
+        content: '👀 Notifications Disabled!',
+        flags: MessageFlags.Ephemeral,
+      });
+
+      await interactionUser.roles.remove(role);
+
     } catch (error) {
       console.error('Error handling queue refresh:', error);
       await interaction.reply({
