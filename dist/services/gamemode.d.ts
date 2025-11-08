@@ -9,6 +9,7 @@ export declare class Gamemode {
     private config;
     private category;
     private resultsChannel;
+    private lfgChannel;
     private queues;
     private matchmakingMutex;
     private ratingService;
@@ -17,6 +18,7 @@ export declare class Gamemode {
     initialize(): Promise<void>;
     private ensureCategory;
     private ensureResultsChannel;
+    private ensureLFGChannel;
     private initializeQueues;
     getQueue(queueId: string): Queue | undefined;
     getQueueByChannelId(channelId: string): Queue | undefined;

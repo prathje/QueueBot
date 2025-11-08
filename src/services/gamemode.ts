@@ -11,6 +11,7 @@ export class Gamemode {
   private config: GamemodeConfig;
   private category: CategoryChannel | null = null;
   private resultsChannel: TextChannel | null = null;
+  private lfgChannel: TextChannel | null = null;
   private queues: Map<string, Queue> = new Map();
   private matchmakingMutex: Mutex;
   private ratingService: RatingService;
@@ -125,6 +126,74 @@ export class Gamemode {
     }
   }
 
+  private async ensureLFGChannel(): Promise<void> {
+    if (!this.category) {
+      throw new Error('Category must be created before lfg channel');
+    }
+
+    if (!this.config.pingRole) {
+      console.log("No ping role configured for LFG channel.");
+      return;
+    }
+
+
+    try {
+      // ensure that lfg role exists!
+      const role = await this.guild.roles.create(
+          {
+            name: this.config.pingRole,
+            mentionable: true // so we can ping!
+          }
+      );
+
+      const channelName = `${this.config.id}-lfg`;
+
+      let lfgChannel = this.guild.channels.cache.find(
+          (ch) => ch.name === channelName && ch.type === ChannelType.GuildText && ch.parentId === this.category?.id,
+      ) as TextChannel;
+
+      const permissionOverwrites =  [
+        {
+          id: this.guild.roles.everyone.id,
+          allow: [
+            PermissionFlagsBits.ViewChannel
+          ],
+          deny: [
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.CreatePublicThreads,
+            PermissionFlagsBits.CreatePrivateThreads,
+          ],
+        },
+        {
+          id: role.id,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+          ],
+        },
+      ];
+
+      if (!lfgChannel) {
+        lfgChannel = await this.guild.channels.create({
+          name: channelName,
+          type: ChannelType.GuildText,
+          parent: this.category.id,
+          permissionOverwrites: permissionOverwrites
+        });
+        console.log(`Created lfg channel: ${channelName}`);
+      } else {
+        // Update permissions for existing results channel
+        await lfgChannel.permissionOverwrites.set(permissionOverwrites);
+        console.log(`Updated permissions for existing lfg channel: ${channelName}`);
+      }
+
+      this.lfgChannel = lfgChannel;
+    } catch (error) {
+      console.error(`Error ensuring lfg channel for gamemode ${this.config.id}:`, error);
+      throw error;
+    }
+  }
+
   private async initializeQueues(): Promise<void> {
     if (!this.category) {
       throw new Error('Category must be created before initializing queues');
@@ -143,6 +212,7 @@ export class Gamemode {
           this.matchmakingMutex,
           this.resultsChannel,
           this.onMatchResult.bind(this),
+          this.config.id + "-lfg"
         );
         await queue.initialize();
         this.queues.set(queueConfig.id, queue);

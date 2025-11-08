@@ -110,6 +110,7 @@ export interface QueueConfig {
 
 export interface GamemodeConfig {
   id: string;
+  pingRole: string|null;
   displayName: string;
   queues: QueueConfig[];
 }

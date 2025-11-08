@@ -21,7 +21,8 @@ export declare class Queue {
     private matchmakingMutex;
     private interactionListener;
     private disabled;
-    constructor(client: Client, guild: Guild, category: CategoryChannel, config: QueueConfig, matchmakingMutex: Mutex, resultsChannel: (TextChannel | null) | undefined, onMatchResult: ((matchResult: IMatchResult) => Promise<void>) | null);
+    private pingRole;
+    constructor(client: Client, guild: Guild, category: CategoryChannel, config: QueueConfig, matchmakingMutex: Mutex, resultsChannel: (TextChannel | null) | undefined, onMatchResult: ((matchResult: IMatchResult) => Promise<void>) | null, pingRole?: string | null);
     initialize(): Promise<void>;
     private ensureChannel;
     private setupQueueMessage;
@@ -34,6 +35,8 @@ export declare class Queue {
     private handleJoinQueue;
     private handleLeaveQueue;
     private handleRefreshQueue;
+    private handlePingRoleAdd;
+    private handlePingRoleRemove;
     private addSinglePlayerProgrammatically;
     private addPlayersToQueue;
     checkForMatch(): Promise<void>;

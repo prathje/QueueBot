@@ -93,6 +93,7 @@ class QueueBot {
     const gamemodeConfigs: GamemodeConfig[] = [
       {
         id: 'gctf',
+        pingRole: 'gctf-lfg',
         displayName: 'gCTF - Grenade Capture the Flag',
         queues: [
           {
@@ -130,6 +131,7 @@ class QueueBot {
       },
       {
         id: 'ctf',
+        pingRole: 'ctf-lfg',
         displayName: 'Vanilla CTF',
         queues: [
           {
@@ -164,6 +166,7 @@ class QueueBot {
       },
       {
         id: 'dm',
+        pingRole: 'dm-lfg',
         displayName: 'Vanilla DM',
         queues: [
           {
@@ -177,6 +180,7 @@ class QueueBot {
       },
       {
         id: 'ictf',
+        pingRole: 'ictf-lfg',
         displayName: 'iCTF - Instagib CTF',
         queues: [
           {
@@ -197,6 +201,7 @@ class QueueBot {
       },
       {
         id: 'test',
+        pingRole: 'test-lfg',
         displayName: 'Test',
         queues: [
           {

@@ -9,7 +9,7 @@ const mutex_1 = require("../utils/mutex");
 const message_updater_1 = require("../utils/message_updater");
 const utils_1 = require("../utils");
 class Queue {
-    constructor(client, guild, category, config, matchmakingMutex, resultsChannel = null, onMatchResult) {
+    constructor(client, guild, category, config, matchmakingMutex, resultsChannel = null, onMatchResult, pingRole = null) {
         this.channel = null;
         this.resultsChannel = null;
         this.onMatchResult = null;
@@ -18,6 +18,7 @@ class Queue {
         this.activeMatches = new Map();
         this.interactionListener = null;
         this.disabled = false;
+        this.pingRole = null;
         this.client = client;
         this.guild = guild;
         this.category = category;
@@ -27,6 +28,7 @@ class Queue {
         this.onMatchResult = onMatchResult || null;
         this.playerService = players_1.PlayerService.getInstance();
         this.matchmakingService = new matchmaking_1.MatchmakingService(config.gamemodeId);
+        this.pingRole = pingRole;
     }
     async initialize() {
         await this.ensureChannel();
@@ -133,6 +135,14 @@ class Queue {
             .setCustomId(`refresh_queue_${this.config.id}`)
             .setLabel('🔄 Refresh')
             .setStyle(discord_js_1.ButtonStyle.Secondary);
+        const pingRoleAddButton = new discord_js_1.ButtonBuilder()
+            .setCustomId(`ping_role_add_${this.config.id}`)
+            .setLabel('🔥 Enable LFG')
+            .setStyle(discord_js_1.ButtonStyle.Secondary);
+        const pingRoleRemoveButton = new discord_js_1.ButtonBuilder()
+            .setCustomId(`ping_role_remove_${this.config.id}`)
+            .setLabel('😴 Disable LFG')
+            .setStyle(discord_js_1.ButtonStyle.Secondary);
         return new discord_js_1.ActionRowBuilder().addComponents(joinButton, leaveButton /*, refreshButton */);
     }
     setupInteractionHandlers() {
@@ -149,6 +159,12 @@ class Queue {
             }
             else if (customId === `refresh_queue_${this.config.id}`) {
                 await m.runExclusive(() => this.handleRefreshQueue(interaction));
+            }
+            else if (customId === `ping_role_add_${this.config.id}`) {
+                await m.runExclusive(() => this.handlePingRoleAdd(interaction));
+            }
+            else if (customId === `ping_role_remove_${this.config.id}`) {
+                await m.runExclusive(() => this.handlePingRoleRemove(interaction));
             }
         };
         this.client.on('interactionCreate', this.interactionListener);
@@ -240,6 +256,84 @@ class Queue {
             console.error('Error handling queue refresh:', error);
             await interaction.reply({
                 content: 'An error occurred while refreshing the queue.',
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
+    }
+    async handlePingRoleAdd(interaction) {
+        try {
+            const interactionUser = await this.guild.members.fetch(interaction.user.id);
+            if (!this.pingRole) {
+                await interaction.reply({
+                    content: 'No role defined',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+                return;
+            }
+            if (!interactionUser) {
+                await interaction.reply({
+                    content: 'User not found!',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+                return;
+            }
+            if (!interactionUser.roles.cache.find(r => r.name === this.pingRole)) {
+                await interaction.reply({
+                    content: '🚀Notifications Enabled!',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+                await interactionUser.roles.add(this.pingRole);
+            }
+            else {
+                await interaction.reply({
+                    content: 'You already have notifications enabled!',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+        }
+        catch (error) {
+            console.error('Error handling queue refresh:', error);
+            await interaction.reply({
+                content: 'An error occurred while adding the lfg role.',
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+        }
+    }
+    async handlePingRoleRemove(interaction) {
+        try {
+            if (!this.pingRole) {
+                await interaction.reply({
+                    content: 'No role defined',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+                return;
+            }
+            const interactionUser = await this.guild.members.fetch(interaction.user.id);
+            if (!interactionUser) {
+                await interaction.reply({
+                    content: 'User not found!',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+                return;
+            }
+            if (interactionUser.roles.cache.find(r => r.name === this.pingRole)) {
+                await interaction.reply({
+                    content: '👀 Notifications Disabled!',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+                await interactionUser.roles.remove(this.pingRole);
+            }
+            else {
+                await interaction.reply({
+                    content: 'You do not have notifications enabled!',
+                    flags: discord_js_1.MessageFlags.Ephemeral,
+                });
+            }
+        }
+        catch (error) {
+            console.error('Error handling queue refresh:', error);
+            await interaction.reply({
+                content: 'An error occurred while adding the lfg role.',
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
         }

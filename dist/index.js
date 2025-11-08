@@ -76,6 +76,7 @@ class QueueBot {
         const gamemodeConfigs = [
             {
                 id: 'gctf',
+                pingRole: 'gctf-lfg',
                 displayName: 'gCTF - Grenade Capture the Flag',
                 queues: [
                     {
@@ -84,9 +85,7 @@ class QueueBot {
                         mapPool: [
                             'ctf3',
                             'ctf4_old',
-                            'ctf_cryochasm',
                             'ctf_5_limited',
-                            'ctf_duskwood',
                             'ctf_tantum',
                             'ctf_mine',
                             'ctf_planet',
@@ -115,6 +114,7 @@ class QueueBot {
             },
             {
                 id: 'ctf',
+                pingRole: 'ctf-lfg',
                 displayName: 'Vanilla CTF',
                 queues: [
                     {
@@ -149,6 +149,7 @@ class QueueBot {
             },
             {
                 id: 'dm',
+                pingRole: 'dm-lfg',
                 displayName: 'Vanilla DM',
                 queues: [
                     {
@@ -161,7 +162,29 @@ class QueueBot {
                 ],
             },
             {
+                id: 'ictf',
+                pingRole: 'ictf-lfg',
+                displayName: 'iCTF - Instagib CTF',
+                queues: [
+                    {
+                        id: 'ictf_1v1',
+                        displayName: 'iCTF 1v1',
+                        mapPool: ['ctf4_old', 'desertbattle', 'mini4old', 'desertcamp', 'ctf_nessness'],
+                        playerCount: 2,
+                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.RANDOM_TEAMS
+                    },
+                    {
+                        id: 'ictf_2v2',
+                        displayName: 'iCTF 2v2',
+                        mapPool: ['ctf4_old'],
+                        playerCount: 4,
+                        matchmakingAlgorithm: matchmaking_1.MatchmakingAlgorithm.FAIR_TEAMS
+                    }
+                ]
+            },
+            {
                 id: 'test',
+                pingRole: 'test-lfg',
                 displayName: 'Test',
                 queues: [
                     {
