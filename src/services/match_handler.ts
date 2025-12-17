@@ -255,12 +255,18 @@ export class MatchHandler {
       .setTimestamp();
 
     if (this.match.state === MatchState.READY_UP) {
+      const notReadyPlayers = this.match.players.filter((id) => !this.match.readyPlayers.includes(id));
+      const readyStatusValue =
+        notReadyPlayers.length === 0
+          ? `✅ All players ready! (${this.match.players.length}/${this.match.players.length})`
+          : `${this.match.readyPlayers.length}/${this.match.players.length}\n\n**Waiting for:**\n${notReadyPlayers.map((id) => `<@${id}>`).join('\n')}`;
+
       embed.addFields(
         { name: TeamName.TEAM1, value: this.match.teams.team1.map((id) => `<@${id}>`).join('\n'), inline: true },
         { name: TeamName.TEAM2, value: this.match.teams.team2.map((id) => `<@${id}>`).join('\n'), inline: true },
         {
-          name: 'Ready Players',
-          value: `${this.match.readyPlayers.length}/${this.match.players.length}`,
+          name: 'Ready Status',
+          value: readyStatusValue,
           inline: true,
         },
       );
