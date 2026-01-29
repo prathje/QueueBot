@@ -274,8 +274,8 @@ export class Leaderboard {
 
   async updateLeaderboard(): Promise<void> {
     try {
-      // Get top 50 players from leaderboard
-      const leaderboard = await this.ratingService.getLeaderboard(50);
+      // Get top 30 players from leaderboard
+      const leaderboard = await this.ratingService.getLeaderboard(30);
 
       // Build leaderboard embed and button
       const embed = this.buildLeaderboardEmbed(leaderboard);
@@ -373,7 +373,7 @@ export class Leaderboard {
     if (this.messageUpdater) {
       try {
         // Get current leaderboard data
-        const leaderboard = await this.ratingService.getLeaderboard(50);
+        const leaderboard = await this.ratingService.getLeaderboard(30);
         const embed = this.buildLeaderboardEmbed(leaderboard);
 
         // Update message with embed but no components (removes buttons)

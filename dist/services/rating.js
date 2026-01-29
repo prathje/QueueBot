@@ -70,9 +70,10 @@ class RatingService {
      * Get leaderboard for the gamemode
      */
     async getLeaderboard(limit = 50) {
-        // Get latest rating for each player
+        // Get latest rating for each player (only include players active in the last 28 days)
+        const cutoffDate = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000);
         const pipeline = [
-            { $match: { gamemode: this.gamemodeId } },
+            { $match: { gamemode: this.gamemodeId, date: { $gte: cutoffDate } } },
             { $sort: { player: 1, date: -1 } },
             {
                 $group: {

@@ -84,9 +84,10 @@ export class RatingService {
   async getLeaderboard(
     limit: number = 50,
   ): Promise<Array<{ player: string; rating: RatingValue; ordinal: number; ordinalDiff: number; matches: number }>> {
-    // Get latest rating for each player
+    // Get latest rating for each player (only include players active in the last 28 days)
+    const cutoffDate = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000);
     const pipeline = [
-      { $match: { gamemode: this.gamemodeId } },
+      { $match: { gamemode: this.gamemodeId, date: { $gte: cutoffDate } } },
       { $sort: { player: 1 as const, date: -1 as const } },
       {
         $group: {
