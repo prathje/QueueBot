@@ -4,6 +4,7 @@ import { PlayerService } from './players';
 import { RatingService } from './rating';
 import { shuffled, randomElement, generateCombinations } from '../utils';
 import { ordinal } from 'openskill';
+import { MatchResult } from '../models/MatchResult';
 
 export enum MatchmakingAlgorithm {
   RANDOM_TEAMS = 'random teams',
@@ -28,7 +29,7 @@ export class MatchmakingService {
 
     const selectedPlayers = this.selectPlayersForMatch(playersInQueue, queue.playerCount);
     const teams = await this.createTeams(selectedPlayers, queue.matchmakingAlgorithm as MatchmakingAlgorithm);
-    const map = this.selectMap(queue.mapPool);
+    const map = await this.selectMap(queue.mapPool, queue.id, selectedPlayers);
 
     const match: IMatch = {
       id: uuidv4(),
@@ -154,7 +155,15 @@ export class MatchmakingService {
       : { team1: bestCombination.team1, team2: bestCombination.team2 };
   }
 
-  private selectMap(mapPool: string[]): string {
-    return randomElement(mapPool);
+  private async selectMap(mapPool: string[], queueId: string, players: string[]): Promise<string> {
+    const recentResults = await MatchResult.find({
+      queueId,
+      players: { $in: players },
+    }).select('map');
+
+    const playedMaps = new Set(recentResults.map((r) => r.map));
+    const filteredPool = mapPool.filter((m) => !playedMaps.has(m));
+
+    return randomElement(filteredPool.length > 0 ? filteredPool : mapPool);
   }
 }

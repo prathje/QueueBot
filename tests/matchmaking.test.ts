@@ -10,6 +10,11 @@ jest.mock('../src/services/players', () => ({
     getInstance: jest.fn(),
   },
 }));
+jest.mock('../src/models/MatchResult', () => ({
+  MatchResult: {
+    find: jest.fn().mockReturnValue({ select: jest.fn().mockResolvedValue([]) }),
+  },
+}));
 
 // Mock only the random functions for predictable test results
 jest.mock('../src/utils', () => ({

@@ -6,6 +6,7 @@ const types_1 = require("../types");
 const players_1 = require("./players");
 const rating_1 = require("./rating");
 const utils_1 = require("../utils");
+const MatchResult_1 = require("../models/MatchResult");
 var MatchmakingAlgorithm;
 (function (MatchmakingAlgorithm) {
     MatchmakingAlgorithm["RANDOM_TEAMS"] = "random teams";
@@ -23,7 +24,7 @@ class MatchmakingService {
         }
         const selectedPlayers = this.selectPlayersForMatch(playersInQueue, queue.playerCount);
         const teams = await this.createTeams(selectedPlayers, queue.matchmakingAlgorithm);
-        const map = this.selectMap(queue.mapPool);
+        const map = await this.selectMap(queue.mapPool, queue.id, selectedPlayers);
         const match = {
             id: (0, uuid_1.v4)(),
             queueId: queue.id,
@@ -123,8 +124,14 @@ class MatchmakingService {
             ? { team1: bestCombination.team2, team2: bestCombination.team1 }
             : { team1: bestCombination.team1, team2: bestCombination.team2 };
     }
-    selectMap(mapPool) {
-        return (0, utils_1.randomElement)(mapPool);
+    async selectMap(mapPool, queueId, players) {
+        const recentResults = await MatchResult_1.MatchResult.find({
+            queueId,
+            players: { $in: players },
+        }).select('map');
+        const playedMaps = new Set(recentResults.map((r) => r.map));
+        const filteredPool = mapPool.filter((m) => !playedMaps.has(m));
+        return (0, utils_1.randomElement)(filteredPool.length > 0 ? filteredPool : mapPool);
     }
 }
 exports.MatchmakingService = MatchmakingService;
