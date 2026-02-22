@@ -70,10 +70,11 @@ class RatingService {
      * Get leaderboard for the gamemode
      */
     async getLeaderboard(limit = 50) {
-        // Get latest rating for each player (only include players active in the last 28 days)
+        // Get latest rating and total match count for each player,
+        // but only include players active in the last 28 days
         const cutoffDate = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000);
         const pipeline = [
-            { $match: { gamemode: this.gamemodeId, date: { $gte: cutoffDate } } },
+            { $match: { gamemode: this.gamemodeId } },
             { $sort: { player: 1, date: -1 } },
             {
                 $group: {
@@ -81,9 +82,12 @@ class RatingService {
                     rating: { $first: '$after' },
                     ordinal: { $first: '$ordinalAfter' },
                     ordinalDiff: { $first: '$ordinalDiff' },
+                    lastPlayed: { $first: '$date' },
                     matches: { $sum: 1 },
                 },
             },
+            // Filter to only include players active in the last 28 days
+            { $match: { lastPlayed: { $gte: cutoffDate } } },
             { $sort: { ordinal: -1 } },
             { $limit: limit },
             {
