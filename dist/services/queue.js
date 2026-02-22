@@ -399,14 +399,15 @@ class Queue {
     async addPlayersToQueue(playerIds) {
         const successful = [];
         const failed = [];
-        // Shuffle the player order to avoid any potential bias
-        const shuffledPlayerIds = (0, utils_1.shuffled)(playerIds);
-        console.log(`Processing batch autojoin for ${shuffledPlayerIds.length} players in queue ${this.config.id}`);
+        console.log(`Processing batch autojoin for ${playerIds.length} players in queue ${this.config.id}`);
         // Add players one by one in shuffled order
-        for (const playerId of shuffledPlayerIds) {
+        for (const playerId of playerIds) {
             const success = await this.addSinglePlayerProgrammatically(playerId);
             if (success) {
                 successful.push(playerId);
+                // we directly process the queue to avoid that players in the queue are not included despite them waiting.
+                await this.updateQueueMessage();
+                await this.checkForMatch();
             }
             else {
                 failed.push(playerId);
@@ -414,8 +415,6 @@ class Queue {
         }
         // Update queue display and check for matches only once after all additions
         if (successful.length > 0) {
-            await this.updateQueueMessage();
-            await this.checkForMatch();
             console.log(`Successfully added ${successful.length} players to queue ${this.config.id}, ${failed.length} failed`);
         }
         return { successful, failed };
@@ -441,7 +440,8 @@ class Queue {
                 const matchHandler = new match_handler_1.MatchHandler(this.client, this.guild, this.category, match, async (playerIds, queueId) => {
                     // Callback to handle players joining queue (for autojoin)
                     if (queueId === this.config.id) {
-                        const result = await this.addPlayersToQueue(playerIds);
+                        const shuffledPlayerIds = (0, utils_1.shuffled)(playerIds);
+                        const result = await this.addPlayersToQueue(shuffledPlayerIds);
                         // Return true if any succeeded
                         return result.successful.length > 0;
                     }
