@@ -12,7 +12,7 @@ jest.mock('../src/services/players', () => ({
 }));
 jest.mock('../src/models/MatchResult', () => ({
   MatchResult: {
-    find: jest.fn().mockReturnValue({ select: jest.fn().mockResolvedValue([]) }),
+    aggregate: jest.fn().mockResolvedValue([]),
   },
 }));
 

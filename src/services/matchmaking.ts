@@ -156,12 +156,16 @@ export class MatchmakingService {
   }
 
   private async selectMap(mapPool: string[], queueId: string, players: string[]): Promise<string> {
-    const recentResults = await MatchResult.find({
-      queueId,
-      players: { $in: players },
-    }).select('map');
+    // For each player, find their most recent completed match in this queue
+    const lastMatches = await MatchResult.aggregate([
+      { $match: { queueId, players: { $in: players } } },
+      { $sort: { completedAt: -1 } },
+      { $unwind: '$players' },
+      { $match: { players: { $in: players } } },
+      { $group: { _id: '$players', map: { $first: '$map' } } },
+    ]);
 
-    const playedMaps = new Set(recentResults.map((r) => r.map));
+    const playedMaps = new Set(lastMatches.map((r: { map: string }) => r.map));
     const filteredPool = mapPool.filter((m) => !playedMaps.has(m));
 
     return randomElement(filteredPool.length > 0 ? filteredPool : mapPool);
