@@ -36,8 +36,8 @@ export class MessageUpdater {
     this.updateTimeout = null;
 
     try {
-      await this.message.edit(updateOptions);
       this.lastUpdateTime = Date.now();
+      await this.message.edit(updateOptions);
     } catch (error) {
       console.error('Failed to update message:', error);
     }
