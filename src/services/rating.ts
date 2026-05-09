@@ -2,9 +2,32 @@ import { MatchResult, Rating } from '../models';
 import { IMatchResult, IRating, RatingValue } from '../types';
 import { ordinal, predictWin, rate, rating } from 'openskill';
 
+const RATING_DEFAULT = rating();
+const SIGMA_DECAY_DAYS = 28;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+// Sigma climbs back toward the base value at this constant rate,
+// so a player at sigma=0 reaches the base sigma after SIGMA_DECAY_DAYS of inactivity.
+const SIGMA_DECAY_PER_MS = RATING_DEFAULT.sigma / (SIGMA_DECAY_DAYS * MS_PER_DAY);
+
+/**
+ * Inflate a rating's sigma based on time elapsed since it was last updated.
+ * Mu is left unchanged and sigma is capped at the base value.
+ */
+export function applySigmaDecay(
+  value: RatingValue,
+  lastUpdate: Date,
+  asOf: Date,
+  baseSigma: number = RATING_DEFAULT.sigma,
+  decayPerMs: number = SIGMA_DECAY_PER_MS,
+): RatingValue {
+  const elapsedMs = Math.max(0, asOf.getTime() - lastUpdate.getTime());
+  const decayedSigma = Math.min(baseSigma, value.sigma + elapsedMs * decayPerMs);
+  return { mu: value.mu, sigma: decayedSigma };
+}
+
 export class RatingService {
   private gamemodeId: string;
-  private ratingDefault = rating(); // OpenSkill default values
+  private ratingDefault = RATING_DEFAULT; // OpenSkill default values
 
   constructor(gamemodeId: string) {
     this.gamemodeId = gamemodeId;
@@ -17,10 +40,12 @@ export class RatingService {
   async processMatchResult(matchResult: IMatchResult): Promise<void> {
     //console.log(`Processing rating changes for match ${matchResult.matchId} in gamemode ${this.gamemodeId}`);
 
-    // Get current ratings for all players
+    // Get current ratings for all players, decayed to the match completion time
+    // so the "before" we feed OpenSkill (and store in the rating doc) reflects
+    // any inactivity since the player's previous match.
     const playerRatings = new Map<string, RatingValue>();
     for (const playerId of matchResult.players) {
-      const currentRating = await this.getPlayerRating(playerId);
+      const currentRating = await this.getPlayerRating(playerId, matchResult.completedAt);
       playerRatings.set(playerId, currentRating);
     }
 
@@ -54,15 +79,20 @@ export class RatingService {
   }
 
   /**
-   * Get current rating for a player (latest rating or default if no history)
+   * Get current rating for a player (latest rating or default if no history),
+   * with sigma decay applied based on time elapsed since the last update.
    */
-  async getPlayerRating(playerId: string): Promise<RatingValue> {
+  async getPlayerRating(playerId: string, asOf: Date = new Date()): Promise<RatingValue> {
     const latestRating = await Rating.findOne({
       player: playerId,
       gamemode: this.gamemodeId,
     }).sort({ date: -1 });
 
-    return latestRating?.after ?? { mu: this.ratingDefault.mu, sigma: this.ratingDefault.sigma };
+    if (!latestRating) {
+      return { mu: this.ratingDefault.mu, sigma: this.ratingDefault.sigma };
+    }
+
+    return applySigmaDecay(latestRating.after, latestRating.date, asOf);
   }
 
   /**
@@ -86,7 +116,8 @@ export class RatingService {
   ): Promise<Array<{ player: string; rating: RatingValue; ordinal: number; ordinalDiff: number; matches: number }>> {
     // Get latest rating and total match count for each player,
     // but only include players active in the last 28 days
-    const cutoffDate = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000);
+    const now = new Date();
+    const cutoffDate = new Date(now.getTime() - 28 * MS_PER_DAY);
     const pipeline = [
       { $match: { gamemode: this.gamemodeId } },
       { $sort: { player: 1 as const, date: -1 as const } },
@@ -94,7 +125,6 @@ export class RatingService {
         $group: {
           _id: '$player',
           rating: { $first: '$after' },
-          ordinal: { $first: '$ordinalAfter' },
           ordinalDiff: { $first: '$ordinalDiff' },
           lastPlayed: { $first: '$date' },
           matches: { $sum: 1 },
@@ -102,21 +132,31 @@ export class RatingService {
       },
       // Filter to only include players active in the last 28 days
       { $match: { lastPlayed: { $gte: cutoffDate } } },
-      { $sort: { ordinal: -1 as const } },
-      { $limit: limit },
-      {
-        $project: {
-          player: '$_id',
-          rating: 1,
-          ordinal: 1,
-          ordinalDiff: 1,
-          matches: 1,
-          _id: 0,
-        },
-      },
     ];
 
-    return await Rating.aggregate(pipeline as any);
+    const rawEntries: Array<{
+      _id: string;
+      rating: RatingValue;
+      ordinalDiff: number;
+      lastPlayed: Date;
+      matches: number;
+    }> = await Rating.aggregate(pipeline as any);
+
+    // Apply sigma decay against "now" so inactive players slide down the leaderboard,
+    // then sort and slice in memory (decay can re-rank players).
+    return rawEntries
+      .map((entry) => {
+        const decayedRating = applySigmaDecay(entry.rating, entry.lastPlayed, now);
+        return {
+          player: entry._id,
+          rating: decayedRating,
+          ordinal: ordinal(decayedRating),
+          ordinalDiff: entry.ordinalDiff,
+          matches: entry.matches,
+        };
+      })
+      .sort((a, b) => b.ordinal - a.ordinal)
+      .slice(0, limit);
   }
 
   /**
