@@ -109,7 +109,7 @@ class QueueBot {
               'ctf_ambiance',
             ],
             playerCount: 4,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS,
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TOP_2,
           },
           {
             id: 'gctf_3v3',
@@ -124,7 +124,7 @@ class QueueBot {
               'ctf_gartum',
             ],
             playerCount: 6,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS,
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TOP_4,
           },
         ],
       },
@@ -138,21 +138,21 @@ class QueueBot {
             displayName: 'CTF 2v2',
             mapPool: ['ctf1_left', 'ctf_aurochs'],
             playerCount: 4,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS,
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TOP_2,
           },
           {
             id: 'ctf_3v3',
             displayName: 'CTF 3v3',
             mapPool: ['ctf3'],
             playerCount: 6,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS,
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TOP_4,
           },
           {
             id: 'ctf_4v4',
             displayName: 'CTF 4v4',
             mapPool: ['ctf_infiltrate'],
             playerCount: 8,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS,
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TOP_4,
           },
           {
             id: 'ctf_5v5',
@@ -194,7 +194,7 @@ class QueueBot {
             displayName: 'iCTF 2v2',
             mapPool: ['ctf4_old'],
             playerCount: 4,
-            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TEAMS
+            matchmakingAlgorithm: MatchmakingAlgorithm.FAIR_TOP_2
           }
         ]
       },
