@@ -280,9 +280,15 @@ class QueueBot {
           });
         } else if (commandName === 'queue_set_algorithm') {
           const algorithmChoice = interaction.options.getString('algorithm', true);
-          const algorithm =
-            algorithmChoice === 'random teams' ? MatchmakingAlgorithm.RANDOM_TEAMS : MatchmakingAlgorithm.FAIR_TEAMS;
-          const displayName = algorithmChoice === 'random teams' ? 'Random Teams' : 'Fair Teams';
+          const algorithm = algorithmChoice as MatchmakingAlgorithm;
+          const algorithmDisplayNames: Record<string, string> = {
+            [MatchmakingAlgorithm.RANDOM_TEAMS]: 'Random Teams',
+            [MatchmakingAlgorithm.FAIR_TEAMS]: 'Fairest',
+            [MatchmakingAlgorithm.FAIR_TOP_2]: 'Fair (Top 2)',
+            [MatchmakingAlgorithm.FAIR_TOP_3]: 'Fair (Top 3)',
+            [MatchmakingAlgorithm.FAIR_TOP_4]: 'Fair (Top 4)',
+          };
+          const displayName = algorithmDisplayNames[algorithm] ?? algorithmChoice;
 
           await targetQueue.setAlgorithm(algorithm);
           await interaction.reply({

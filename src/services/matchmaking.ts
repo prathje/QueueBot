@@ -9,7 +9,17 @@ import { MatchResult } from '../models/MatchResult';
 export enum MatchmakingAlgorithm {
   RANDOM_TEAMS = 'random teams',
   FAIR_TEAMS = 'fair teams',
+  FAIR_TOP_2 = 'fair top 2',
+  FAIR_TOP_3 = 'fair top 3',
+  FAIR_TOP_4 = 'fair top 4',
 }
+
+const FAIR_ALGORITHM_TOP_K: Partial<Record<MatchmakingAlgorithm, number>> = {
+  [MatchmakingAlgorithm.FAIR_TEAMS]: 1,
+  [MatchmakingAlgorithm.FAIR_TOP_2]: 2,
+  [MatchmakingAlgorithm.FAIR_TOP_3]: 3,
+  [MatchmakingAlgorithm.FAIR_TOP_4]: 4,
+};
 
 export class MatchmakingService {
   private playerService: PlayerService;
@@ -64,9 +74,10 @@ export class MatchmakingService {
     players: string[],
     algorithm: MatchmakingAlgorithm,
   ): Promise<{ team1: string[]; team2: string[] }> {
-    if (algorithm === MatchmakingAlgorithm.FAIR_TEAMS) {
+    const topK = FAIR_ALGORITHM_TOP_K[algorithm];
+    if (topK !== undefined) {
       try {
-        return await this.createTeamsFair(players);
+        return await this.createTeamsFair(players, topK);
       } catch (error) {
         console.error('Error creating fair teams, falling back to random teams:', error);
       }
@@ -85,7 +96,10 @@ export class MatchmakingService {
     };
   }
 
-  private async createTeamsFair(players: string[]): Promise<{ team1: string[]; team2: string[] }> {
+  private async createTeamsFair(
+    players: string[],
+    topK: number,
+  ): Promise<{ team1: string[]; team2: string[] }> {
     if (players.length <= 2) {
       // For 2 or fewer players, just assign them randomly
       return this.createTeamsRandom(players);
@@ -95,7 +109,7 @@ export class MatchmakingService {
     // Generate all possible team combinations
     const teamSize = Math.ceil(players.length / 2);
 
-    let combinations: Array<{ team1: string[]; team2: string[]; probDiff: number }> = [];
+    const combinations: Array<{ team1: string[]; team2: string[]; probDiff: number }> = [];
 
     // Fetch all player ratings once
     const playerRatings = new Map<string, RatingValue>();
@@ -110,8 +124,6 @@ export class MatchmakingService {
     const remainingPlayers = players.slice(1);
     const remainingCombinations = generateCombinations(remainingPlayers, teamSize - 1);
 
-    let bestCombination: { team1: string[]; team2: string[]; probDiff: number } | null = null;
-
     // Calculate rating differences for each combination
     for (const remainingTeam1 of remainingCombinations) {
       const team1 = [firstPlayer, ...remainingTeam1];
@@ -124,35 +136,37 @@ export class MatchmakingService {
 
       const probDiff = Math.abs(winProbs[0] - winProbs[1]); // Closer to 0.5 is more fair, i.e. smaller difference
 
-      const combination = {
+      combinations.push({
         team1: team1,
         team2: team2,
         probDiff: probDiff,
-      };
-
-      if (!bestCombination || combination.probDiff < bestCombination.probDiff) {
-        bestCombination = combination;
-      }
-
-      combinations.push(combination);
+      });
     }
 
     // log the team combinations and their win probabilities
     console.log(combinations);
 
-    if (!bestCombination) {
+    if (combinations.length === 0) {
       console.log('No valid team combinations found, falling back to random teams.');
       // Fallback to random teams if something goes wrong
       return this.createTeamsRandom(players);
     }
 
-    console.log('Selected teams with minimal win probability difference:', bestCombination);
+    // Sort by fairness (smallest probability difference first) and pick randomly from the top K
+    combinations.sort((a, b) => a.probDiff - b.probDiff);
+    const topCombinations = combinations.slice(0, Math.max(1, topK));
+    const selected = randomElement(topCombinations);
+
+    console.log(
+      `Selected one of the top ${topCombinations.length} fairest combinations (out of ${combinations.length}):`,
+      selected,
+    );
 
     // Randomly assign which team is team1 and which is team2
     const shouldSwap = Math.random() < 0.5;
     return shouldSwap
-      ? { team1: bestCombination.team2, team2: bestCombination.team1 }
-      : { team1: bestCombination.team1, team2: bestCombination.team2 };
+      ? { team1: selected.team2, team2: selected.team1 }
+      : { team1: selected.team1, team2: selected.team2 };
   }
 
   private async selectMap(mapPool: string[], queueId: string, players: string[]): Promise<string> {

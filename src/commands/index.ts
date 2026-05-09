@@ -20,7 +20,13 @@ export const commands = [
         .setName('algorithm')
         .setDescription('The matchmaking algorithm to use')
         .setRequired(true)
-        .addChoices({ name: 'Random Teams', value: 'random teams' }, { name: 'Fair Teams', value: 'fair teams' }),
+        .addChoices(
+          { name: 'Random Teams', value: 'random teams' },
+          { name: 'Fairest', value: 'fair teams' },
+          { name: 'Fair (Top 2)', value: 'fair top 2' },
+          { name: 'Fair (Top 3)', value: 'fair top 3' },
+          { name: 'Fair (Top 4)', value: 'fair top 4' },
+        ),
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
