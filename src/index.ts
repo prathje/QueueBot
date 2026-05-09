@@ -115,12 +115,10 @@ class QueueBot {
             id: 'gctf_3v3',
             displayName: 'gCTF 3v3',
             mapPool: [
-              'ctf2',
               'ctf_5_limited',
               'ctf_duskwood',
               'ctf_mars',
               'ctf_skylock',
-              'ctf_magma',
               'ctf_chryochasm',
               'ctf_exeliar',
               'ctf_gartum',
