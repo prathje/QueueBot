@@ -12,27 +12,51 @@ export const RATING_DISPLAY_BASE = 1000;
 export const RATING_DISPLAY_SCALE = 20;
 export const RATING_DISPLAY_DECIMALS = 0;
 
-// Sigma climbs back toward the base value at a constant rate. We express it
-// as displayed MMR points per day so it reads the way we talk about it.
+// Daily target for displayed-rating decay of an above-average inactive player.
 // Set to 0 to disable decay entirely; getLeaderboard then takes a faster
 // Mongo-side aggregation path that uses the stored ordinals directly.
-export const RATING_DECAY_PER_DAY = 0;
-const SIGMA_DECAY_PER_MS = RATING_DECAY_PER_DAY / (3 * RATING_DISPLAY_SCALE) / MS_PER_DAY;
+export const RATING_DECAY_PER_DAY: number = 5;
+
+// Split the displayed daily loss 50/50 between mu (regression toward the
+// default mean) and sigma (uncertainty growth toward the base sigma):
+//   displayed_loss/day = SCALE * |Δmu|             (mu half)
+//                      + 3 * SCALE * Δsigma        (sigma half)
+//                      = RATING_DECAY_PER_DAY
+// For below-average players mu drifts up toward the mean, which adds positive
+// displayed change that cancels the sigma loss — they don't get further
+// punished for being idle.
+const MU_DECAY_PER_MS = RATING_DECAY_PER_DAY / 2 / RATING_DISPLAY_SCALE / MS_PER_DAY;
+const SIGMA_DECAY_PER_MS = RATING_DECAY_PER_DAY / 2 / (3 * RATING_DISPLAY_SCALE) / MS_PER_DAY;
 
 /**
- * Inflate a rating's sigma based on time elapsed since it was last updated.
- * Mu is left unchanged and sigma is capped at the base value.
+ * Drift a rating toward the OpenSkill prior based on time elapsed since the
+ * rating was last updated. Mu drifts toward baseMu (regression to the mean,
+ * stopping at baseMu); sigma grows toward baseSigma and is capped there.
  */
-export function applySigmaDecay(
+export function applyRatingDecay(
   value: RatingValue,
   lastUpdate: Date,
   asOf: Date,
+  baseMu: number = RATING_DEFAULT.mu,
   baseSigma: number = RATING_DEFAULT.sigma,
-  decayPerMs: number = SIGMA_DECAY_PER_MS,
+  muDecayPerMs: number = MU_DECAY_PER_MS,
+  sigmaDecayPerMs: number = SIGMA_DECAY_PER_MS,
 ): RatingValue {
   const elapsedMs = Math.max(0, asOf.getTime() - lastUpdate.getTime());
-  const decayedSigma = Math.min(baseSigma, value.sigma + elapsedMs * decayPerMs);
-  return { mu: value.mu, sigma: decayedSigma };
+
+  const muStep = elapsedMs * muDecayPerMs;
+  let decayedMu: number;
+  if (value.mu > baseMu) {
+    decayedMu = Math.max(baseMu, value.mu - muStep);
+  } else if (value.mu < baseMu) {
+    decayedMu = Math.min(baseMu, value.mu + muStep);
+  } else {
+    decayedMu = baseMu;
+  }
+
+  const decayedSigma = Math.min(baseSigma, value.sigma + elapsedMs * sigmaDecayPerMs);
+
+  return { mu: decayedMu, sigma: decayedSigma };
 }
 
 export class RatingService {
@@ -102,7 +126,7 @@ export class RatingService {
       return { mu: this.ratingDefault.mu, sigma: this.ratingDefault.sigma };
     }
 
-    return applySigmaDecay(latestRating.after, latestRating.date, asOf);
+    return applyRatingDecay(latestRating.after, latestRating.date, asOf);
   }
 
   /**
@@ -191,7 +215,7 @@ export class RatingService {
     // then sort and slice in memory (decay can re-rank players).
     return rawEntries
       .map((entry) => {
-        const decayedRating = applySigmaDecay(entry.rating, entry.lastPlayed, now);
+        const decayedRating = applyRatingDecay(entry.rating, entry.lastPlayed, now);
         return {
           player: entry._id,
           rating: decayedRating,
