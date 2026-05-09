@@ -1,8 +1,15 @@
-import { applySigmaDecay } from '../src/services/rating';
+import {
+  applySigmaDecay,
+  RATING_DECAY_PER_DAY,
+  RATING_DISPLAY_SCALE,
+} from '../src/services/rating';
 import { rating } from 'openskill';
 
 const BASE_SIGMA = rating().sigma;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+// Explicit rate used by timing-sensitive tests so they don't couple to the
+// module's configured decay rate.
+const ONE_SIGMA_PER_DAY_PER_MS = 1 / MS_PER_DAY;
 
 describe('applySigmaDecay', () => {
   test('returns the same sigma when no time has elapsed', () => {
@@ -19,20 +26,19 @@ describe('applySigmaDecay', () => {
     expect(result.mu).toBe(30);
   });
 
-  test('inflates sigma linearly with time', () => {
+  test('inflates sigma linearly with time at the given rate', () => {
     const last = new Date('2026-01-01T00:00:00Z');
-    const halfwayDays = 14;
-    const now = new Date(last.getTime() + halfwayDays * MS_PER_DAY);
-    const result = applySigmaDecay({ mu: 25, sigma: 0 }, last, now);
-    // After 14 of 28 days starting from sigma=0, sigma should be base/2
-    expect(result.sigma).toBeCloseTo(BASE_SIGMA / 2, 10);
+    const now = new Date(last.getTime() + 5 * MS_PER_DAY);
+    // Pass explicit base + rate so the test is independent of module defaults.
+    const result = applySigmaDecay({ mu: 25, sigma: 0 }, last, now, 100, ONE_SIGMA_PER_DAY_PER_MS);
+    expect(result.sigma).toBeCloseTo(5, 10);
   });
 
-  test('caps sigma at the base value after 28+ days', () => {
+  test('caps sigma at the provided base value', () => {
     const last = new Date('2026-01-01T00:00:00Z');
-    const now = new Date(last.getTime() + 60 * MS_PER_DAY);
-    const result = applySigmaDecay({ mu: 25, sigma: 1 }, last, now);
-    expect(result.sigma).toBeCloseTo(BASE_SIGMA, 10);
+    const now = new Date(last.getTime() + 100 * MS_PER_DAY);
+    const result = applySigmaDecay({ mu: 25, sigma: 1 }, last, now, 5, ONE_SIGMA_PER_DAY_PER_MS);
+    expect(result.sigma).toBeCloseTo(5, 10);
   });
 
   test('does not reduce sigma when stored sigma already equals base', () => {
@@ -49,10 +55,13 @@ describe('applySigmaDecay', () => {
     expect(result.sigma).toBeCloseTo(2, 10);
   });
 
-  test('reaches base after exactly 28 days starting from sigma=0', () => {
+  test('default rate produces RATING_DECAY_PER_DAY displayed points per day', () => {
+    // Sanity check that the module-level defaults are wired up consistently
+    // with the displayed decay rate we advertise.
     const last = new Date('2026-01-01T00:00:00Z');
-    const now = new Date(last.getTime() + 28 * MS_PER_DAY);
+    const now = new Date(last.getTime() + MS_PER_DAY);
     const result = applySigmaDecay({ mu: 25, sigma: 0 }, last, now);
-    expect(result.sigma).toBeCloseTo(BASE_SIGMA, 10);
+    const displayedLossPerDay = 3 * result.sigma * RATING_DISPLAY_SCALE;
+    expect(displayedLossPerDay).toBeCloseTo(RATING_DECAY_PER_DAY, 5);
   });
 });

@@ -12,10 +12,28 @@ import {
   ButtonInteraction,
   MessageFlags,
 } from 'discord.js';
-import { RatingService } from './rating';
+import {
+  RatingService,
+  RATING_DISPLAY_BASE,
+  RATING_DISPLAY_SCALE,
+  RATING_DISPLAY_DECIMALS,
+} from './rating';
 import { MessageUpdater } from '../utils/message_updater';
 import { RatingValue } from '../types';
 import { ordinal } from 'openskill';
+
+function formatRating(value: number): string {
+  return (RATING_DISPLAY_BASE + value * RATING_DISPLAY_SCALE).toFixed(RATING_DISPLAY_DECIMALS);
+}
+
+function formatRatingDiff(value: number): string {
+  const scaled = value * RATING_DISPLAY_SCALE;
+  // Round once and re-stringify to avoid a "-0" sign when a tiny negative
+  // value rounds to zero at low decimal precision.
+  const rounded = Number(scaled.toFixed(RATING_DISPLAY_DECIMALS));
+  const formatted = rounded.toFixed(RATING_DISPLAY_DECIMALS);
+  return rounded >= 0 ? `+${formatted}` : formatted;
+}
 
 export class Leaderboard {
   private client: Client;
@@ -169,7 +187,7 @@ export class Leaderboard {
         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
         // format (${entry.matches} matches) but if matches == 1 then "1 match"
         const matchText = entry.matches === 1 ? '1 match' : `${entry.matches} matches`;
-        const ratingDisplay = `${entry.ordinal.toFixed(2)} (${matchText})`;
+        const ratingDisplay = `${formatRating(entry.ordinal)} (${matchText})`;
 
         ranks.push(medal);
         players.push(`<@${entry.player}>`);
@@ -323,7 +341,7 @@ export class Leaderboard {
 
   createUserRankEmbed(userId: string, rank: number, entry: any): EmbedBuilder {
     const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
-    const ratingDisplay = `${entry.ordinal.toFixed(2)}`;
+    const ratingDisplay = formatRating(entry.ordinal);
 
     return new EmbedBuilder()
       .setTitle(`Your Rank in ${this.gamemodeDisplayName}`)
@@ -348,7 +366,7 @@ export class Leaderboard {
     // they stand right now, not just the per-match deltas below.
     embed.addFields({
       name: 'Current Rating',
-      value: ordinal(currentRating).toFixed(2),
+      value: formatRating(ordinal(currentRating)),
       inline: false,
     });
 
@@ -362,12 +380,8 @@ export class Leaderboard {
       const timestamp = Math.floor(date.getTime() / 1000);
       const dateString = `<t:${timestamp}:R>`;
 
-      // Format ordinal diff with two decimal places and padding
-      const diffString =
-        entry.ordinalDiff >= 0 ? `+${entry.ordinalDiff.toFixed(2)}` : `${entry.ordinalDiff.toFixed(2)}`;
-
       dates.push(dateString);
-      diffs.push(diffString);
+      diffs.push(formatRatingDiff(entry.ordinalDiff));
     });
 
     // Add two fields with all values joined by newlines

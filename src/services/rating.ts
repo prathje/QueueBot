@@ -3,11 +3,21 @@ import { IMatchResult, IRating, RatingValue } from '../types';
 import { ordinal, predictWin, rate, rating } from 'openskill';
 
 const RATING_DEFAULT = rating();
-const SIGMA_DECAY_DAYS = 28;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-// Sigma climbs back toward the base value at this constant rate,
-// so a player at sigma=0 reaches the base sigma after SIGMA_DECAY_DAYS of inactivity.
-const SIGMA_DECAY_PER_MS = RATING_DEFAULT.sigma / (SIGMA_DECAY_DAYS * MS_PER_DAY);
+
+// Display-only transform. Storage and matchmaking use raw OpenSkill values;
+// these constants just make ratings look like a familiar MMR number and
+// per-match changes feel more substantial to players.
+export const RATING_DISPLAY_BASE = 1000;
+export const RATING_DISPLAY_SCALE = 20;
+export const RATING_DISPLAY_DECIMALS = 0;
+
+// Sigma climbs back toward the base value at a constant rate. We express it
+// as displayed MMR points per day so it reads the way we talk about it.
+// Time to fully cap from sigma=0: (3 * baseSigma * SCALE) / RATING_DECAY_PER_DAY
+// days (~100 days at the current defaults).
+export const RATING_DECAY_PER_DAY = 5;
+const SIGMA_DECAY_PER_MS = RATING_DECAY_PER_DAY / (3 * RATING_DISPLAY_SCALE) / MS_PER_DAY;
 
 /**
  * Inflate a rating's sigma based on time elapsed since it was last updated.
