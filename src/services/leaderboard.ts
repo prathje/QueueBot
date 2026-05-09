@@ -14,6 +14,8 @@ import {
 } from 'discord.js';
 import { RatingService } from './rating';
 import { MessageUpdater } from '../utils/message_updater';
+import { RatingValue } from '../types';
+import { ordinal } from 'openskill';
 
 export class Leaderboard {
   private client: Client;
@@ -257,7 +259,8 @@ export class Leaderboard {
         return;
       }
 
-      const embed = this.createUserHistoryEmbed(userId, history);
+      const currentRating = await this.ratingService.getPlayerRating(userId);
+      const embed = this.createUserHistoryEmbed(userId, history, currentRating);
 
       await interaction.reply({
         embeds: [embed],
@@ -334,12 +337,20 @@ export class Leaderboard {
       .setTimestamp();
   }
 
-  createUserHistoryEmbed(userId: string, history: any[]): EmbedBuilder {
+  createUserHistoryEmbed(userId: string, history: any[], currentRating: RatingValue): EmbedBuilder {
     const embed = new EmbedBuilder()
       .setTitle(`Your Rating History in ${this.gamemodeDisplayName}`)
       .setColor(0x00ff00)
       .setDescription(`<@${userId}>, here are your last ${history.length} matches:`)
       .setTimestamp();
+
+    // Show the player's current decayed rating at the top so they can see where
+    // they stand right now, not just the per-match deltas below.
+    embed.addFields({
+      name: 'Current Rating',
+      value: ordinal(currentRating).toFixed(2),
+      inline: false,
+    });
 
     // Build arrays for each column
     const dates: string[] = [];
