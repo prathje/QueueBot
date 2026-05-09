@@ -14,9 +14,9 @@ export const RATING_DISPLAY_DECIMALS = 0;
 
 // Sigma climbs back toward the base value at a constant rate. We express it
 // as displayed MMR points per day so it reads the way we talk about it.
-// Time to fully cap from sigma=0: (3 * baseSigma * SCALE) / RATING_DECAY_PER_DAY
-// days (~100 days at the current defaults).
-export const RATING_DECAY_PER_DAY = 5;
+// Set to 0 to disable decay entirely; getLeaderboard then takes a faster
+// Mongo-side aggregation path that uses the stored ordinals directly.
+export const RATING_DECAY_PER_DAY = 0;
 const SIGMA_DECAY_PER_MS = RATING_DECAY_PER_DAY / (3 * RATING_DISPLAY_SCALE) / MS_PER_DAY;
 
 /**
@@ -128,6 +128,42 @@ export class RatingService {
     // but only include players active in the last 28 days
     const now = new Date();
     const cutoffDate = new Date(now.getTime() - 28 * MS_PER_DAY);
+
+    // When decay is disabled the stored ordinalAfter is still authoritative, so
+    // we let Mongo do the sort + limit. With decay enabled we have to fetch all
+    // active players and re-sort in JS because decay can re-rank them.
+    if (RATING_DECAY_PER_DAY === 0) {
+      const pipeline = [
+        { $match: { gamemode: this.gamemodeId } },
+        { $sort: { player: 1 as const, date: -1 as const } },
+        {
+          $group: {
+            _id: '$player',
+            rating: { $first: '$after' },
+            ordinal: { $first: '$ordinalAfter' },
+            ordinalDiff: { $first: '$ordinalDiff' },
+            lastPlayed: { $first: '$date' },
+            matches: { $sum: 1 },
+          },
+        },
+        { $match: { lastPlayed: { $gte: cutoffDate } } },
+        { $sort: { ordinal: -1 as const } },
+        { $limit: limit },
+        {
+          $project: {
+            player: '$_id',
+            rating: 1,
+            ordinal: 1,
+            ordinalDiff: 1,
+            matches: 1,
+            _id: 0,
+          },
+        },
+      ];
+
+      return await Rating.aggregate(pipeline as any);
+    }
+
     const pipeline = [
       { $match: { gamemode: this.gamemodeId } },
       { $sort: { player: 1 as const, date: -1 as const } },
@@ -140,7 +176,6 @@ export class RatingService {
           matches: { $sum: 1 },
         },
       },
-      // Filter to only include players active in the last 28 days
       { $match: { lastPlayed: { $gte: cutoffDate } } },
     ];
 
