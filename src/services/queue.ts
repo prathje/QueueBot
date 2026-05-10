@@ -663,6 +663,11 @@ export class Queue {
     try {
       console.log(`Shutting down queue: ${this.config.displayName}`);
 
+      // Notify and clear any queued players first — startup_reset will wipe
+      // them on next boot, but doing it here gives them an explicit ping in
+      // the channel so they know to re-join once the bot is back.
+      await this.notifyAndRemoveQueuedPlayers();
+
       // Unregister from player service updates
       this.playerService.unregisterQueueUpdateCallback(this.config.id);
 
@@ -712,6 +717,40 @@ export class Queue {
       }
     } catch (error) {
       console.error(`Error shutting down queue ${this.config.displayName}:`, error);
+    }
+  }
+
+  private async notifyAndRemoveQueuedPlayers(): Promise<void> {
+    const playersInQueue = this.playerService.getPlayersInQueue(this.config.id);
+    if (playersInQueue.length === 0) return;
+
+    const message =
+      `The bot is restarting — you've been removed from the **${this.config.displayName}** queue. ` +
+      `Please re-join once it's back up.`;
+
+    for (const playerId of playersInQueue) {
+      try {
+        const user = await this.client.users.fetch(playerId);
+        await user.send({ content: message });
+      } catch (error) {
+        // DMs may be disabled or the user unreachable — log and move on so
+        // shutdown can still proceed for the rest of the queue.
+        console.error(
+          `Error DMing player ${playerId} about ${this.config.displayName} restart:`,
+          error,
+        );
+      }
+    }
+
+    for (const playerId of playersInQueue) {
+      try {
+        await this.playerService.removePlayerFromQueue(playerId, this.config.id);
+      } catch (error) {
+        console.error(
+          `Error removing player ${playerId} from queue ${this.config.id}:`,
+          error,
+        );
+      }
     }
   }
 
