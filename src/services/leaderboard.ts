@@ -37,6 +37,12 @@ function formatRatingDiff(value: number): string {
   return rounded >= 0 ? `+${formatted}` : formatted;
 }
 
+function formatWinrateBadge(wins: number, matches: number): string {
+  if (matches === 0) return '(0 matches)';
+  const pct = Math.round((wins / matches) * 100);
+  return `(${pct}% • ${matches})`;
+}
+
 export class Leaderboard {
   private client: Client;
   private guild: Guild;
@@ -169,7 +175,14 @@ export class Leaderboard {
   }
 
   private buildLeaderboardEmbed(
-    leaderboard: Array<{ player: string; rating: any; ordinal: number; ordinalDiff: number; matches: number }>,
+    leaderboard: Array<{
+      player: string;
+      rating: any;
+      ordinal: number;
+      ordinalDiff: number;
+      matches: number;
+      wins: number;
+    }>,
   ): EmbedBuilder {
     const embed = new EmbedBuilder()
       .setTitle(`🏆 ${this.gamemodeDisplayName} Leaderboard`)
@@ -187,9 +200,7 @@ export class Leaderboard {
       leaderboard.forEach((entry, index) => {
         const rank = index + 1;
         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
-        // format (${entry.matches} matches) but if matches == 1 then "1 match"
-        const matchText = entry.matches === 1 ? '1 match' : `${entry.matches} matches`;
-        const ratingDisplay = `${formatRating(entry.ordinal)} (${matchText})`;
+        const ratingDisplay = `${formatRating(entry.ordinal)} ${formatWinrateBadge(entry.wins, entry.matches)}`;
 
         ranks.push(medal);
         players.push(`<@${entry.player}>`);
@@ -393,6 +404,9 @@ export class Leaderboard {
   createUserRankEmbed(userId: string, rank: number, entry: any): EmbedBuilder {
     const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : this.getNumberWithOrdinal(rank);
     const ratingDisplay = formatRating(entry.ordinal);
+    const winrate = entry.matches > 0 ? Math.round((entry.wins / entry.matches) * 100) : 0;
+    const matchesDisplay =
+      entry.matches > 0 ? `${entry.matches} (${winrate}% won)` : `${entry.matches}`;
 
     return new EmbedBuilder()
       .setTitle(`Your Rank in ${this.gamemodeDisplayName}`)
@@ -401,7 +415,7 @@ export class Leaderboard {
       .addFields(
         { name: 'Rank', value: medal, inline: true },
         { name: 'Rating', value: ratingDisplay, inline: true },
-        { name: 'Matches', value: `${entry.matches}`, inline: true },
+        { name: 'Matches', value: matchesDisplay, inline: true },
       )
       .setTimestamp();
   }

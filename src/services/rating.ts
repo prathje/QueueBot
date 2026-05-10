@@ -206,11 +206,46 @@ export class RatingService {
   }
 
   /**
+   * Number of completed matches each player won, aggregated from MatchResult.
+   * Pass a set of player IDs to scope the query (e.g. just the leaderboard).
+   */
+  async getPlayerWinCounts(playerIds?: string[]): Promise<Map<string, number>> {
+    const matchStage: Record<string, unknown> = { gamemodeId: this.gamemodeId };
+    if (playerIds && playerIds.length > 0) {
+      matchStage.players = { $in: playerIds };
+    }
+    const results: Array<{ _id: string; wins: number }> = await MatchResult.aggregate([
+      { $match: matchStage },
+      {
+        $project: {
+          winners: {
+            $cond: [{ $eq: ['$winningTeam', 1] }, '$teams.team1', '$teams.team2'],
+          },
+        },
+      },
+      { $unwind: '$winners' },
+      { $group: { _id: '$winners', wins: { $sum: 1 } } },
+    ]);
+    const map = new Map<string, number>();
+    for (const r of results) map.set(r._id, r.wins);
+    return map;
+  }
+
+  /**
    * Get leaderboard for the gamemode
    */
   async getLeaderboard(
     limit: number = 50,
-  ): Promise<Array<{ player: string; rating: RatingValue; ordinal: number; ordinalDiff: number; matches: number }>> {
+  ): Promise<
+    Array<{
+      player: string;
+      rating: RatingValue;
+      ordinal: number;
+      ordinalDiff: number;
+      matches: number;
+      wins: number;
+    }>
+  > {
     // Get latest rating and total match count for each player. Optionally
     // filter out players whose last match is older than LEADERBOARD_ACTIVE_DAYS;
     // when set to 0 we include everyone (decay alone keeps inactive players down).
@@ -254,7 +289,15 @@ export class RatingService {
         },
       );
 
-      return await Rating.aggregate(pipeline);
+      const entries: Array<{
+        player: string;
+        rating: RatingValue;
+        ordinal: number;
+        ordinalDiff: number;
+        matches: number;
+      }> = await Rating.aggregate(pipeline);
+      const winsByPlayer = await this.getPlayerWinCounts(entries.map((e) => e.player));
+      return entries.map((e) => ({ ...e, wins: winsByPlayer.get(e.player) ?? 0 }));
     }
 
     const pipeline: any[] = [
@@ -284,7 +327,7 @@ export class RatingService {
 
     // Apply sigma decay against "now" so inactive players slide down the leaderboard,
     // then sort and slice in memory (decay can re-rank players).
-    return rawEntries
+    const sliced = rawEntries
       .map((entry) => {
         const decayedRating = applyRatingDecay(entry.rating, entry.lastPlayed, now);
         return {
@@ -297,6 +340,8 @@ export class RatingService {
       })
       .sort((a, b) => b.ordinal - a.ordinal)
       .slice(0, limit);
+    const winsByPlayer = await this.getPlayerWinCounts(sliced.map((e) => e.player));
+    return sliced.map((e) => ({ ...e, wins: winsByPlayer.get(e.player) ?? 0 }));
   }
 
   /**
