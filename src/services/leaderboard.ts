@@ -43,6 +43,35 @@ function formatWinrateBadge(wins: number, matches: number): string {
   return `(${pct}% • ${matches})`;
 }
 
+// Discord embed fields cap at 1024 chars; each `<@id> 55% • 114` line is
+// ~32 chars, so we trim long tiers with a "+N more" tail rather than risk a
+// send error.
+function formatTierPlayers(
+  entries: Array<{ player: string; matches: number; wins: number }>,
+): string {
+  if (entries.length === 0) return '_empty_';
+  const FIELD_LIMIT = 1000;
+  const lines: string[] = [];
+  let length = 0;
+  let truncatedAt = -1;
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    const line = `<@${e.player}> ${formatWinrateBadge(e.wins, e.matches)}`;
+    const nextLength = length + (lines.length === 0 ? line.length : line.length + 1);
+    if (nextLength > FIELD_LIMIT) {
+      truncatedAt = i;
+      break;
+    }
+    lines.push(line);
+    length = nextLength;
+  }
+  let result = lines.join('\n');
+  if (truncatedAt >= 0) {
+    result += `\n_+${entries.length - truncatedAt} more_`;
+  }
+  return result;
+}
+
 export class Leaderboard {
   private client: Client;
   private guild: Guild;
@@ -231,7 +260,13 @@ export class Leaderboard {
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📈');
 
-    return new ActionRowBuilder<ButtonBuilder>().addComponents(rankButton, historyButton);
+    const tierlistButton = new ButtonBuilder()
+      .setCustomId(`show_tierlist_${this.gamemodeId}`)
+      .setLabel('Show Tierlist')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🏷️');
+
+    return new ActionRowBuilder<ButtonBuilder>().addComponents(rankButton, historyButton, tierlistButton);
   }
 
   private setupInteractionHandlers(): void {
@@ -243,6 +278,8 @@ export class Leaderboard {
         await this.handleShowRank(interaction);
       } else if (customId === `show_history_${this.gamemodeId}`) {
         await this.handleShowHistory(interaction);
+      } else if (customId === `show_tierlist_${this.gamemodeId}`) {
+        await this.handleShowTierlist(interaction);
       }
     };
 
@@ -337,6 +374,82 @@ export class Leaderboard {
         flags: MessageFlags.Ephemeral,
       });
     }
+  }
+
+  private async handleShowTierlist(interaction: ButtonInteraction): Promise<void> {
+    try {
+      const entries = await this.ratingService.getTierlistEntries();
+      const embed = this.buildTierlistEmbed(entries);
+      await interaction.reply({
+        embeds: [embed],
+        flags: MessageFlags.Ephemeral,
+      });
+    } catch (error) {
+      console.error('Error handling show tierlist interaction:', error);
+      await interaction.reply({
+        content: 'Sorry, there was an error building the tierlist. Please try again later.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+  }
+
+  private buildTierlistEmbed(
+    entries: Array<{ player: string; ordinal: number; sigma: number; matches: number; wins: number }>,
+  ): EmbedBuilder {
+    const embed = new EmbedBuilder()
+      .setTitle(`🏷️ ${this.gamemodeDisplayName} Tierlist`)
+      .setColor(0x5865f2)
+      .setTimestamp();
+
+    if (entries.length === 0) {
+      embed.setDescription('No players have completed matches yet.');
+      return embed;
+    }
+
+    // Players whose rating isn't settled (sigma still high) — split off so
+    // they don't pollute the percentile ranking with noisy ordinals.
+    const PROVISIONAL_SIGMA = 5;
+    const provisional = entries.filter((e) => e.sigma > PROVISIONAL_SIGMA);
+    const confirmed = entries.filter((e) => e.sigma <= PROVISIONAL_SIGMA);
+
+    // Percentile cuts: S top 5%, A 5–15%, B 15–35%, C 35–65%, D 65–100%.
+    type TierEntry = { player: string; matches: number; wins: number };
+    const tiers: Array<{ label: string; emoji: string; players: TierEntry[] }> = [
+      { label: 'S', emoji: '🟥', players: [] },
+      { label: 'A', emoji: '🟧', players: [] },
+      { label: 'B', emoji: '🟨', players: [] },
+      { label: 'C', emoji: '🟩', players: [] },
+      { label: 'D', emoji: '🟦', players: [] },
+    ];
+    const cuts = [0.05, 0.15, 0.35, 0.65, 1.0];
+
+    confirmed.forEach((entry, idx) => {
+      const pct = (idx + 1) / confirmed.length;
+      const tierIdx = cuts.findIndex((c) => pct <= c);
+      tiers[Math.max(0, tierIdx)].players.push(entry);
+    });
+
+    embed.setDescription(
+      `Tier cutoffs by ordinal percentile (raw, no decay applied). ` +
+        `Players with σ > ${PROVISIONAL_SIGMA} are counted as **Provisional**.`,
+    );
+
+    for (const tier of tiers) {
+      embed.addFields({
+        name: `${tier.emoji} Tier ${tier.label} (${tier.players.length})`,
+        value: formatTierPlayers(tier.players),
+        inline: false,
+      });
+    }
+    if (provisional.length > 0) {
+      embed.addFields({
+        name: `❓ Provisional (${provisional.length})`,
+        value: '_Players whose rating isn\'t settled yet — keep playing!_',
+        inline: false,
+      });
+    }
+
+    return embed;
   }
 
   private async buildChartAttachment(

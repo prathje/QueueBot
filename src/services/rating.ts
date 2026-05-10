@@ -206,6 +206,70 @@ export class RatingService {
   }
 
   /**
+   * All-players snapshot for tier-list calculation. Replays every match in
+   * memory without applying decay, so the resulting ordinals reflect pure
+   * peak skill from match outcomes alone. (The stored ordinalAfter values
+   * have between-match decay baked in via processMatchResult, which is the
+   * right thing for the leaderboard but not for tier assignment.)
+   *
+   * Returns descending by ordinal, with sigma so the caller can split out
+   * provisional players whose rating isn't settled yet.
+   */
+  async getTierlistEntries(): Promise<
+    Array<{ player: string; ordinal: number; sigma: number; matches: number; wins: number }>
+  > {
+    const matches = await MatchResult.find({ gamemodeId: this.gamemodeId })
+      .sort({ completedAt: 1 })
+      .lean();
+    if (matches.length === 0) return [];
+
+    const ratings = new Map<string, RatingValue>();
+    const matchCounts = new Map<string, number>();
+    const winCounts = new Map<string, number>();
+
+    const getOrInit = (playerId: string): RatingValue => {
+      const existing = ratings.get(playerId);
+      if (existing) return existing;
+      return { mu: this.ratingDefault.mu, sigma: this.ratingDefault.sigma };
+    };
+
+    for (const match of matches) {
+      const team1Ratings = match.teams.team1.map((p) => {
+        const r = getOrInit(p);
+        return rating({ mu: r.mu, sigma: r.sigma });
+      });
+      const team2Ratings = match.teams.team2.map((p) => {
+        const r = getOrInit(p);
+        return rating({ mu: r.mu, sigma: r.sigma });
+      });
+      const ranks = match.winningTeam === 1 ? [1, 2] : [2, 1];
+      const [[...newTeam1], [...newTeam2]] = rate([team1Ratings, team2Ratings], { rank: ranks });
+
+      const winningTeam = match.winningTeam;
+      match.teams.team1.forEach((p, i) => {
+        ratings.set(p, { mu: newTeam1[i].mu, sigma: newTeam1[i].sigma });
+        matchCounts.set(p, (matchCounts.get(p) ?? 0) + 1);
+        if (winningTeam === 1) winCounts.set(p, (winCounts.get(p) ?? 0) + 1);
+      });
+      match.teams.team2.forEach((p, i) => {
+        ratings.set(p, { mu: newTeam2[i].mu, sigma: newTeam2[i].sigma });
+        matchCounts.set(p, (matchCounts.get(p) ?? 0) + 1);
+        if (winningTeam === 2) winCounts.set(p, (winCounts.get(p) ?? 0) + 1);
+      });
+    }
+
+    return [...ratings.entries()]
+      .map(([player, r]) => ({
+        player,
+        ordinal: ordinal(r),
+        sigma: r.sigma,
+        matches: matchCounts.get(player) ?? 0,
+        wins: winCounts.get(player) ?? 0,
+      }))
+      .sort((a, b) => b.ordinal - a.ordinal);
+  }
+
+  /**
    * Number of completed matches each player won, aggregated from MatchResult.
    * Pass a set of player IDs to scope the query (e.g. just the leaderboard).
    */
