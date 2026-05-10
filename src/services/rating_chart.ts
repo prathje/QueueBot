@@ -195,6 +195,7 @@ export async function renderRatingHistoryChart(
     options: {
       responsive: false,
       animation: false as const,
+      layout: { padding: 10 },
       plugins: {
         legend: { display: false },
         title: { display: false },
