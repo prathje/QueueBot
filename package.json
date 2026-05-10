@@ -28,6 +28,10 @@
     "openskill": "^4.1.0",
     "uuid": "^9.0.0"
   },
+  "optionalDependencies": {
+    "chart.js": "^4.5.1",
+    "chartjs-node-canvas": "^5.0.0"
+  },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^20.0.0",

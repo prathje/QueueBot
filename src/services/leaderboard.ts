@@ -7,6 +7,7 @@ import {
   Guild,
   PermissionFlagsBits,
   ActionRowBuilder,
+  AttachmentBuilder,
   ButtonBuilder,
   ButtonStyle,
   ButtonInteraction,
@@ -18,8 +19,9 @@ import {
   RATING_DISPLAY_SCALE,
   RATING_DISPLAY_DECIMALS,
 } from './rating';
+import { renderRatingHistoryChart } from './rating_chart';
 import { MessageUpdater } from '../utils/message_updater';
-import { RatingValue } from '../types';
+import { IRating, RatingValue } from '../types';
 import { ordinal } from 'openskill';
 
 function formatRating(value: number): string {
@@ -280,8 +282,15 @@ export class Leaderboard {
       const currentRating = await this.ratingService.getPlayerRating(userId);
       const embed = this.createUserHistoryEmbed(userId, history, currentRating);
 
+      const fullHistory = await this.ratingService.getPlayerRatingHistoryAscending(userId);
+      const attachment = await this.buildHistoryChartAttachment(fullHistory);
+      if (attachment) {
+        embed.setImage('attachment://history.png');
+      }
+
       await interaction.reply({
         embeds: [embed],
+        files: attachment ? [attachment] : [],
         flags: MessageFlags.Ephemeral,
       });
     } catch (error) {
@@ -290,6 +299,17 @@ export class Leaderboard {
         content: 'Sorry, there was an error retrieving your history. Please try again later.',
         flags: MessageFlags.Ephemeral,
       });
+    }
+  }
+
+  private async buildHistoryChartAttachment(history: IRating[]): Promise<AttachmentBuilder | null> {
+    try {
+      const buffer = await renderRatingHistoryChart(history, new Date());
+      if (!buffer) return null;
+      return new AttachmentBuilder(buffer, { name: 'history.png' });
+    } catch (error) {
+      console.error('Error rendering rating history chart:', error);
+      return null;
     }
   }
 

@@ -148,6 +148,19 @@ export class RatingService {
   }
 
   /**
+   * Full rating history for a player, ascending by date — for charting where
+   * we want every event plus the decay segments between them.
+   */
+  async getPlayerRatingHistoryAscending(playerId: string): Promise<IRating[]> {
+    return await Rating.find({
+      player: playerId,
+      gamemode: this.gamemodeId,
+    })
+      .sort({ date: 1 })
+      .lean();
+  }
+
+  /**
    * Get leaderboard for the gamemode
    */
   async getLeaderboard(

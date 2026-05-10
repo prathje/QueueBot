@@ -4,8 +4,12 @@ services:
     working_dir: /bot/
     volumes:
       - ./:/bot
-    #command: sh -c "npm install && npm run build && exec node dist/index.js"
-    command: sh -c "npm install && sleep infinity" # && exec npm run dev
+    # Runtime libs (cairo/pango/jpeg/gif/rsvg + fonts) are required by the
+    # native `canvas` module that backs chartjs-node-canvas. They're cheap to
+    # install on top of node:20 (debian-based) and apt-get is idempotent on
+    # subsequent container starts.
+    #command: sh -c "apt-get update && apt-get install -y --no-install-recommends libcairo2 libpango-1.0-0 libjpeg62-turbo libgif7 librsvg2-2 fonts-liberation && npm install && npm run build && exec node dist/index.js"
+    command: sh -c "apt-get update && apt-get install -y --no-install-recommends libcairo2 libpango-1.0-0 libjpeg62-turbo libgif7 librsvg2-2 fonts-liberation && npm install && sleep infinity" # && exec npm run dev
     depends_on:
       - mongodb
     environment:
