@@ -34,9 +34,24 @@ const MU_DECAY_PER_MS = RATING_DECAY_PER_DAY / 2 / RATING_DISPLAY_SCALE / MS_PER
 const SIGMA_DECAY_PER_MS = RATING_DECAY_PER_DAY / 2 / (3 * RATING_DISPLAY_SCALE) / MS_PER_DAY;
 
 /**
- * Drift a rating toward the OpenSkill prior based on time elapsed since the
- * rating was last updated. Mu drifts toward baseMu (regression to the mean,
- * stopping at baseMu); sigma grows toward baseSigma and is capped there.
+ * Drift a rating toward the displayed prior (ord = baseMu − 3·baseSigma) by
+ * a fixed amount per day, regardless of which (mu, sigma) state the player
+ * happens to be in. The displayed rating moves at exactly RATING_DECAY_PER_DAY
+ * per day until it lands on the prior, then stops.
+ *
+ * Mechanism:
+ *  - Above the prior (ord > baseOrd): drop ord. Mu drops toward baseMu (only
+ *    if μ > baseMu) and sigma grows toward baseSigma. Drop is split 50/50 in
+ *    ord-units; if one variable runs out of room, the other absorbs the rest.
+ *  - Below the prior (ord < baseOrd): raise ord. Only mu can rise (growing
+ *    sigma would push ord further below). Sigma stays put.
+ *
+ * The legacy muDecayPerMs and sigmaDecayPerMs parameters now act as a rate
+ * preference: their sum (mu + 3·sigma) is the total ord-decay rate, and the
+ * 50/50 split inside the function is independent of how that sum is broken
+ * down. With the defaults (mu = 3·sigma) they describe both the sum and the
+ * actual mu/sigma changes per day; with imbalanced rates only the sum
+ * matters.
  */
 export function applyRatingDecay(
   value: RatingValue,
@@ -48,20 +63,50 @@ export function applyRatingDecay(
   sigmaDecayPerMs: number = SIGMA_DECAY_PER_MS,
 ): RatingValue {
   const elapsedMs = Math.max(0, asOf.getTime() - lastUpdate.getTime());
+  if (elapsedMs === 0) return { mu: value.mu, sigma: value.sigma };
 
-  const muStep = elapsedMs * muDecayPerMs;
-  let decayedMu: number;
-  if (value.mu > baseMu) {
-    decayedMu = Math.max(baseMu, value.mu - muStep);
-  } else if (value.mu < baseMu) {
-    decayedMu = Math.min(baseMu, value.mu + muStep);
-  } else {
-    decayedMu = baseMu;
+  const ord = value.mu - 3 * value.sigma;
+  const baseOrd = baseMu - 3 * baseSigma;
+  const distance = ord - baseOrd;
+  if (distance === 0) return { mu: value.mu, sigma: value.sigma };
+
+  const ordRatePerMs = muDecayPerMs + 3 * sigmaDecayPerMs;
+  if (ordRatePerMs <= 0) return { mu: value.mu, sigma: value.sigma };
+
+  // Signed ord change to apply this step, clamped so we never overshoot the
+  // prior. Direction is opposite to the sign of distance.
+  const stepMagnitude = Math.min(Math.abs(distance), elapsedMs * ordRatePerMs);
+
+  if (distance > 0) {
+    // Above the prior: ord drops. Pull mu down (if μ > baseMu) and grow sigma.
+    const muRoom = Math.max(0, value.mu - baseMu);
+    const sigmaRoom = Math.max(0, baseSigma - value.sigma);
+
+    let muDrop = stepMagnitude / 2;
+    let sigmaGrow = stepMagnitude / 6;
+
+    if (muDrop > muRoom) {
+      sigmaGrow += (muDrop - muRoom) / 3;
+      muDrop = muRoom;
+    }
+    if (sigmaGrow > sigmaRoom) {
+      muDrop += (sigmaGrow - sigmaRoom) * 3;
+      sigmaGrow = sigmaRoom;
+    }
+
+    return {
+      mu: value.mu - muDrop,
+      sigma: value.sigma + sigmaGrow,
+    };
   }
 
-  const decayedSigma = Math.min(baseSigma, value.sigma + elapsedMs * sigmaDecayPerMs);
-
-  return { mu: decayedMu, sigma: decayedSigma };
+  // Below the prior: ord rises via mu only; sigma stays put.
+  const muRoom = Math.max(0, baseMu - value.mu);
+  const muRise = Math.min(stepMagnitude, muRoom);
+  return {
+    mu: value.mu + muRise,
+    sigma: value.sigma,
+  };
 }
 
 export class RatingService {

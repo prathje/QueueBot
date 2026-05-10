@@ -25,7 +25,10 @@ describe('applyRatingDecay', () => {
     expect(result.sigma).toBeCloseTo(2, 10);
   });
 
-  test('mu drifts down toward baseMu when above', () => {
+  test('ord drops toward baseOrd when above the prior (50/50 split)', () => {
+    // baseMu=25, baseSigma=10 → baseOrd=-5. Player at (30, 5): ord=15, distance=20.
+    // Balanced rates (mu = 3*sigma) so the 50/50 ord split lands on muStep =
+    // muRate*elapsed and sigmaStep = sigmaRate*elapsed.
     const last = new Date('2026-01-01T00:00:00Z');
     const now = new Date(last.getTime() + 4 * MS_PER_DAY);
     const result = applyRatingDecay(
@@ -34,28 +37,33 @@ describe('applyRatingDecay', () => {
       now,
       25,
       10,
-      0.5 / MS_PER_DAY, // muDecayPerMs (0.5/day)
-      0.1 / MS_PER_DAY, // sigmaDecayPerMs (0.1/day)
+      0.5 / MS_PER_DAY,
+      (0.5 / 3) / MS_PER_DAY,
     );
-    expect(result.mu).toBeCloseTo(28, 10); // 30 - 4*0.5
+    expect(result.mu).toBeCloseTo(28, 10); // 30 - 4 days * 0.5/day
+    expect(result.sigma).toBeCloseTo(5 + 4 * (0.5 / 3), 10);
   });
 
-  test('mu drifts up toward baseMu when below', () => {
+  test('ord rises toward baseOrd via mu when below the prior', () => {
+    // baseMu=25, baseSigma=10 → baseOrd=-5. Player at (20, 10): ord=-10, below prior.
+    // Only mu rises; sigma stays. Mu rises at full ord rate (0.5+3*0.5/3 = 1/day).
     const last = new Date('2026-01-01T00:00:00Z');
     const now = new Date(last.getTime() + 4 * MS_PER_DAY);
     const result = applyRatingDecay(
-      { mu: 20, sigma: 5 },
+      { mu: 20, sigma: 10 },
       last,
       now,
       25,
       10,
       0.5 / MS_PER_DAY,
-      0.1 / MS_PER_DAY,
+      (0.5 / 3) / MS_PER_DAY,
     );
-    expect(result.mu).toBeCloseTo(22, 10); // 20 + 4*0.5
+    expect(result.mu).toBeCloseTo(24, 10); // 20 + 4 days * 1/day
+    expect(result.sigma).toBeCloseTo(10, 10); // sigma unchanged below the prior
   });
 
-  test('mu does not overshoot baseMu when drifting down', () => {
+  test('does not overshoot the prior when ord drops past baseOrd', () => {
+    // 100 days is far longer than needed; result should land exactly at baseOrd.
     const last = new Date('2026-01-01T00:00:00Z');
     const now = new Date(last.getTime() + 100 * MS_PER_DAY);
     const result = applyRatingDecay(
@@ -65,24 +73,28 @@ describe('applyRatingDecay', () => {
       25,
       10,
       0.5 / MS_PER_DAY,
-      0.1 / MS_PER_DAY,
+      (0.5 / 3) / MS_PER_DAY,
     );
     expect(result.mu).toBeCloseTo(25, 10);
+    expect(result.sigma).toBeCloseTo(10, 10);
+    expect(result.mu - 3 * result.sigma).toBeCloseTo(25 - 30, 10); // baseOrd = -5
   });
 
-  test('mu does not overshoot baseMu when drifting up', () => {
+  test('does not overshoot the prior when ord rises past baseOrd from below', () => {
     const last = new Date('2026-01-01T00:00:00Z');
     const now = new Date(last.getTime() + 100 * MS_PER_DAY);
     const result = applyRatingDecay(
-      { mu: 20, sigma: 5 },
+      { mu: 20, sigma: 10 },
       last,
       now,
       25,
       10,
       0.5 / MS_PER_DAY,
-      0.1 / MS_PER_DAY,
+      (0.5 / 3) / MS_PER_DAY,
     );
+    // baseOrd=-5, starts at -10 (distance 5), reaches baseOrd via mu rising 5.
     expect(result.mu).toBeCloseTo(25, 10);
+    expect(result.sigma).toBeCloseTo(10, 10);
   });
 
   test('sigma inflates linearly with time at the given rate', () => {
@@ -139,17 +151,131 @@ describe('applyRatingDecay', () => {
     expect(muLoss + sigmaLoss).toBeCloseTo(RATING_DECAY_PER_DAY, 5);
   });
 
-  test('default rates produce ~0 net displayed change for below-average idle player', () => {
-    // A below-average player's mu drifts up (positive displayed contribution)
-    // while sigma grows (negative displayed contribution); these cancel.
+  test('mu rate doubles after sigma caps so daily displayed loss stays at RATING_DECAY_PER_DAY', () => {
+    // Once sigma can't grow any further it stops contributing to the daily
+    // loss; redirecting its share into mu keeps the total rate at the
+    // configured RATING_DECAY_PER_DAY (instead of halving).
+    const last = new Date('2026-01-01T00:00:00Z');
+    const now = new Date(last.getTime() + MS_PER_DAY);
+    const result = applyRatingDecay({ mu: 30, sigma: BASE_SIGMA }, last, now);
+
+    expect(result.sigma).toBeCloseTo(BASE_SIGMA, 10);
+    const muLoss = (30 - result.mu) * RATING_DISPLAY_SCALE;
+    expect(muLoss).toBeCloseTo(RATING_DECAY_PER_DAY, 5);
+  });
+
+  test('mu rate doubles symmetrically for below-base mu when sigma is capped', () => {
+    const last = new Date('2026-01-01T00:00:00Z');
+    const now = new Date(last.getTime() + MS_PER_DAY);
+    const result = applyRatingDecay({ mu: 20, sigma: BASE_SIGMA }, last, now);
+
+    expect(result.sigma).toBeCloseTo(BASE_SIGMA, 10);
+    const muGain = (result.mu - 20) * RATING_DISPLAY_SCALE;
+    expect(muGain).toBeCloseTo(RATING_DECAY_PER_DAY, 5);
+  });
+
+  test('sigma rate doubles after mu caps (symmetric fix)', () => {
+    // μ slightly above base hits its cap quickly, then σ should run at the
+    // doubled rate so the daily displayed loss stays at RATING_DECAY_PER_DAY.
+    const last = new Date('2026-01-01T00:00:00Z');
+    // 100-day stretch — long enough that μ certainly caps and σ runs in phase 2.
+    const now = new Date(last.getTime() + 100 * MS_PER_DAY);
+    const startMu = BASE_MU + 0.1; // caps in 0.8 days at base rate
+    const startSigma = 4;
+    const result = applyRatingDecay({ mu: startMu, sigma: startSigma }, last, now);
+
+    expect(result.mu).toBeCloseTo(BASE_MU, 10);
+
+    // Total displayed loss for the period covered by phase 1 + phase 2 should
+    // be RATING_DECAY_PER_DAY * (days until both cap). After both cap, no more
+    // loss accrues.
+    const daysToMuCap = 0.1 / (RATING_DECAY_PER_DAY / 2 / RATING_DISPLAY_SCALE); // 0.8 days
+    const sigmaLeft = BASE_SIGMA - startSigma - daysToMuCap * (RATING_DECAY_PER_DAY / 2 / (3 * RATING_DISPLAY_SCALE));
+    const daysToSigmaCapDoubled = sigmaLeft / (2 * (RATING_DECAY_PER_DAY / 2 / (3 * RATING_DISPLAY_SCALE)));
+    const totalDecayDays = daysToMuCap + daysToSigmaCapDoubled;
+
+    const expectedDisplayedLoss = totalDecayDays * RATING_DECAY_PER_DAY;
+    const startDisplayed = (startMu - 3 * startSigma) * RATING_DISPLAY_SCALE;
+    const endDisplayed = (result.mu - 3 * result.sigma) * RATING_DISPLAY_SCALE;
+    expect(startDisplayed - endDisplayed).toBeCloseTo(expectedDisplayedLoss, 3);
+  });
+
+  test('rank order preserved among all idle players, regardless of state', () => {
+    // ord moves toward baseOrd at a single rate (RATING_DECAY_PER_DAY/day in
+    // displayed units), clamped at baseOrd. So for any pair where ord_A > ord_B
+    // at t=0, ord_A(t) ≥ ord_B(t) for all subsequent t.
+    const last = new Date('2026-01-01T00:00:00Z');
+    const states = [
+      { mu: 30, sigma: 2 },
+      { mu: 30, sigma: 5 },
+      { mu: 30, sigma: BASE_SIGMA },
+      { mu: 28, sigma: 3 },
+      { mu: 28, sigma: 6 },
+      { mu: 28, sigma: BASE_SIGMA },
+      { mu: 26, sigma: 4 },
+      { mu: 26, sigma: 7 },
+      { mu: 26, sigma: BASE_SIGMA },
+      { mu: BASE_MU + 0.5, sigma: 4 },
+      { mu: BASE_MU + 0.1, sigma: 6 },
+      { mu: BASE_MU, sigma: 4 },
+      { mu: BASE_MU, sigma: 7 },
+      { mu: BASE_MU - 0.5, sigma: 5 },
+      { mu: 24, sigma: 2 }, // below mean μ but ord > 0
+      { mu: 22, sigma: 6 },
+      { mu: 22, sigma: BASE_SIGMA },
+      { mu: 18, sigma: 3 },
+      { mu: 18, sigma: 7 },
+      { mu: 15, sigma: BASE_SIGMA },
+    ];
+    const days = [0, 0.5, 1, 2, 4, 8, 16, 32, 60, 100, 200];
+
+    for (let i = 0; i < states.length; i++) {
+      for (let j = 0; j < states.length; j++) {
+        if (i === j) continue;
+        const ordA0 = states[i].mu - 3 * states[i].sigma;
+        const ordB0 = states[j].mu - 3 * states[j].sigma;
+        if (ordA0 <= ordB0) continue;
+        for (const d of days) {
+          const t = new Date(last.getTime() + d * MS_PER_DAY);
+          const dA = applyRatingDecay(states[i], last, t);
+          const dB = applyRatingDecay(states[j], last, t);
+          const ordA = dA.mu - 3 * dA.sigma;
+          const ordB = dB.mu - 3 * dB.sigma;
+          if (ordA + 1e-9 < ordB) {
+            throw new Error(
+              `Rank swap at day ${d}: A=${JSON.stringify(states[i])} ord ${ordA0.toFixed(3)}->${ordA.toFixed(3)}, ` +
+                `B=${JSON.stringify(states[j])} ord ${ordB0.toFixed(3)}->${ordB.toFixed(3)}`,
+            );
+          }
+        }
+      }
+    }
+  });
+
+  test('below-mean player above 1000 still drops at full rate via sigma alone', () => {
+    // (μ=15, σ=2) → ord=9, displayed=1180. μ < baseMu but ord > baseOrd, so
+    // they're "above the prior" and decay should pull them down at full rate.
+    // μ has no room to drop (already below baseMu), so all of the daily loss
+    // comes from σ growth.
     const last = new Date('2026-01-01T00:00:00Z');
     const now = new Date(last.getTime() + MS_PER_DAY);
     const result = applyRatingDecay({ mu: 15, sigma: 2 }, last, now);
 
-    const muChange = (result.mu - 15) * RATING_DISPLAY_SCALE;
-    const sigmaChange = -(result.sigma - 2) * 3 * RATING_DISPLAY_SCALE;
-    const netDisplayedChange = muChange + sigmaChange;
+    expect(result.mu).toBeCloseTo(15, 10);
+    const ordBefore = 15 - 6;
+    const ordAfter = result.mu - 3 * result.sigma;
+    const displayedLoss = (ordBefore - ordAfter) * RATING_DISPLAY_SCALE;
+    expect(displayedLoss).toBeCloseTo(RATING_DECAY_PER_DAY, 5);
+  });
 
-    expect(netDisplayedChange).toBeCloseTo(0, 5);
+  test('below-1000 player rises at full rate via mu alone (sigma unchanged)', () => {
+    // (μ=20, σ=8.333) → ord=-5, displayed=900. Below the prior; only μ rises.
+    const last = new Date('2026-01-01T00:00:00Z');
+    const now = new Date(last.getTime() + MS_PER_DAY);
+    const result = applyRatingDecay({ mu: 20, sigma: BASE_SIGMA }, last, now);
+
+    expect(result.sigma).toBeCloseTo(BASE_SIGMA, 10);
+    const muGain = (result.mu - 20) * RATING_DISPLAY_SCALE;
+    expect(muGain).toBeCloseTo(RATING_DECAY_PER_DAY, 5);
   });
 });
