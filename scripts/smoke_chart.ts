@@ -41,16 +41,23 @@ for (let i = 0; i < 18; i++) {
   });
 }
 
-// 30 idle days at the end so the decay tail is visible
-const asOf = new Date(events[events.length - 1].date.getTime() + 30 * MS_PER_DAY);
+// 1 idle day at the end — enough to see a small tail, but the last week
+// still contains real matches so the dotted variant has dots to render.
+const asOf = new Date(events[events.length - 1].date.getTime() + 1 * MS_PER_DAY);
 
 (async () => {
-  const buf = await renderRatingHistoryChart(events, asOf);
-  if (!buf) {
+  const overall = await renderRatingHistoryChart(events, asOf, { showEvents: false });
+  const lastWeek = await renderRatingHistoryChart(events, asOf, {
+    since: new Date(asOf.getTime() - 7 * MS_PER_DAY),
+    showEvents: true,
+  });
+  if (!overall || !lastWeek) {
     console.log('chart rendering unavailable (chartjs-node-canvas not loadable)');
     return;
   }
-  const path = '/tmp/history.png';
-  fs.writeFileSync(path, buf);
-  console.log(`wrote ${path} (${buf.length} bytes, ${events.length} events)`);
+  fs.writeFileSync('/tmp/history_overall.png', overall);
+  fs.writeFileSync('/tmp/history_last_week.png', lastWeek);
+  console.log(
+    `wrote /tmp/history_overall.png (${overall.length}b) and /tmp/history_last_week.png (${lastWeek.length}b)`,
+  );
 })();

@@ -280,17 +280,43 @@ export class Leaderboard {
       }
 
       const currentRating = await this.ratingService.getPlayerRating(userId);
-      const embed = this.createUserHistoryEmbed(userId, history, currentRating);
+      const mainEmbed = this.createUserHistoryEmbed(userId, history, currentRating);
 
+      const now = new Date();
       const fullHistory = await this.ratingService.getPlayerRatingHistoryAscending(userId);
-      const attachment = await this.buildHistoryChartAttachment(fullHistory);
-      if (attachment) {
-        embed.setImage('attachment://history.png');
+
+      const lastWeekFile = await this.buildChartAttachment(
+        fullHistory,
+        now,
+        { since: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), showEvents: true },
+        'last_week.png',
+      );
+      const overallFile = await this.buildChartAttachment(
+        fullHistory,
+        now,
+        { showEvents: false },
+        'overall.png',
+      );
+
+      const embeds = [mainEmbed];
+      const files: AttachmentBuilder[] = [];
+
+      if (lastWeekFile) {
+        mainEmbed.setImage('attachment://last_week.png');
+        files.push(lastWeekFile);
+      }
+      if (overallFile) {
+        const overallEmbed = new EmbedBuilder()
+          .setTitle('All-time')
+          .setColor(0x00ff00)
+          .setImage('attachment://overall.png');
+        embeds.push(overallEmbed);
+        files.push(overallFile);
       }
 
       await interaction.reply({
-        embeds: [embed],
-        files: attachment ? [attachment] : [],
+        embeds,
+        files,
         flags: MessageFlags.Ephemeral,
       });
     } catch (error) {
@@ -302,13 +328,18 @@ export class Leaderboard {
     }
   }
 
-  private async buildHistoryChartAttachment(history: IRating[]): Promise<AttachmentBuilder | null> {
+  private async buildChartAttachment(
+    history: IRating[],
+    asOf: Date,
+    options: Parameters<typeof renderRatingHistoryChart>[2],
+    fileName: string,
+  ): Promise<AttachmentBuilder | null> {
     try {
-      const buffer = await renderRatingHistoryChart(history, new Date());
+      const buffer = await renderRatingHistoryChart(history, asOf, options);
       if (!buffer) return null;
-      return new AttachmentBuilder(buffer, { name: 'history.png' });
+      return new AttachmentBuilder(buffer, { name: fileName });
     } catch (error) {
-      console.error('Error rendering rating history chart:', error);
+      console.error(`Error rendering rating history chart (${fileName}):`, error);
       return null;
     }
   }
