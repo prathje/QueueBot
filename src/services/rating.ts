@@ -15,7 +15,7 @@ export const RATING_DISPLAY_DECIMALS = 0;
 // Daily target for displayed-rating decay of an above-average inactive player.
 // Set to 0 to disable decay entirely; getLeaderboard then takes a faster
 // Mongo-side aggregation path that uses the stored ordinals directly.
-export const RATING_DECAY_PER_DAY: number = 5;
+export const RATING_DECAY_PER_DAY: number = 2;
 
 // Hide players from the leaderboard if their last match is older than this
 // many days. Set to 0 to disable the filter (e.g. when decay alone is enough

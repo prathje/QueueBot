@@ -163,7 +163,7 @@ function main() {
 
   const anon = anonymize(matches);
 
-  const scenarios = [0, 2.5, 5, 10];
+  const scenarios = [0, 1, 2, 5];
   const results = scenarios.map((d) => ({ decayPerDay: d, ...simulate(matches, d) }));
 
   const TOP_N = 20;

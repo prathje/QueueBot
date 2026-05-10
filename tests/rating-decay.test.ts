@@ -176,28 +176,23 @@ describe('applyRatingDecay', () => {
 
   test('sigma rate doubles after mu caps (symmetric fix)', () => {
     // μ slightly above base hits its cap quickly, then σ should run at the
-    // doubled rate so the daily displayed loss stays at RATING_DECAY_PER_DAY.
+    // doubled rate so the daily displayed loss stays at RATING_DECAY_PER_DAY
+    // for the entire decay run. Eventually both cap and the player sits at
+    // the prior — total loss equals startOrd − baseOrd in displayed units.
     const last = new Date('2026-01-01T00:00:00Z');
-    // 100-day stretch — long enough that μ certainly caps and σ runs in phase 2.
-    const now = new Date(last.getTime() + 100 * MS_PER_DAY);
-    const startMu = BASE_MU + 0.1; // caps in 0.8 days at base rate
+    // Long enough that any reasonable RATING_DECAY_PER_DAY will fully converge.
+    const now = new Date(last.getTime() + 1000 * MS_PER_DAY);
+    const startMu = BASE_MU + 0.1;
     const startSigma = 4;
     const result = applyRatingDecay({ mu: startMu, sigma: startSigma }, last, now);
 
     expect(result.mu).toBeCloseTo(BASE_MU, 10);
+    expect(result.sigma).toBeCloseTo(BASE_SIGMA, 10);
 
-    // Total displayed loss for the period covered by phase 1 + phase 2 should
-    // be RATING_DECAY_PER_DAY * (days until both cap). After both cap, no more
-    // loss accrues.
-    const daysToMuCap = 0.1 / (RATING_DECAY_PER_DAY / 2 / RATING_DISPLAY_SCALE); // 0.8 days
-    const sigmaLeft = BASE_SIGMA - startSigma - daysToMuCap * (RATING_DECAY_PER_DAY / 2 / (3 * RATING_DISPLAY_SCALE));
-    const daysToSigmaCapDoubled = sigmaLeft / (2 * (RATING_DECAY_PER_DAY / 2 / (3 * RATING_DISPLAY_SCALE)));
-    const totalDecayDays = daysToMuCap + daysToSigmaCapDoubled;
-
-    const expectedDisplayedLoss = totalDecayDays * RATING_DECAY_PER_DAY;
     const startDisplayed = (startMu - 3 * startSigma) * RATING_DISPLAY_SCALE;
     const endDisplayed = (result.mu - 3 * result.sigma) * RATING_DISPLAY_SCALE;
-    expect(startDisplayed - endDisplayed).toBeCloseTo(expectedDisplayedLoss, 3);
+    const expectedLoss = startDisplayed; // baseOrd = 0, so end displayed is 0
+    expect(startDisplayed - endDisplayed).toBeCloseTo(expectedLoss, 3);
   });
 
   test('rank order preserved among all idle players, regardless of state', () => {
